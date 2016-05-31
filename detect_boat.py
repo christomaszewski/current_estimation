@@ -8,7 +8,7 @@ from collections import deque
 
 boatTrack = deque(maxlen=200)
 
-with open('cameracalib', 'rb') as f:
+with open('calib/gopro', 'rb') as f:
 	mappingTuple = pickle.load(f)
 
 datasetDir = sys.argv[1]
@@ -18,14 +18,14 @@ cv2.namedWindow('img', cv2.WINDOW_NORMAL)
 images = glob.glob(datasetDir + "/*.JPG")
 list.sort(images)
 
+detector = BoatDetector()
+
 for fileName in images:
 
 	img = cv2.imread(fileName)
 
 	#img = cv2.imread('boat.JPG')
 	undistorted = cv2.remap(img, mappingTuple[0], mappingTuple[1], interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
-
-	detector = BoatDetector()
 
 	result = detector.detect(undistorted)
 	print(result)

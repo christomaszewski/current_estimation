@@ -15,7 +15,7 @@ objp[0,:,:2] = numpy.mgrid[0:9,0:6].T.reshape(-1,2)
 objpoints = [] # 3d point in real world space
 imgpoints = [] # 2d points in image plane.
 
-images = glob.glob('calib/*.JPG')
+images = glob.glob('~/Documents/datasets/calib/*.JPG')
 cv2.namedWindow('img', cv2.WINDOW_NORMAL)
 
 for fname in images:
