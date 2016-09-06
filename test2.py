@@ -2,8 +2,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import vf_utils.vector_field as vf
 import vf_utils.approximate as vf_approx
-import vf_utils.utils as vf_utils
+import vf_utils.core as vf_core
 import vf_utils.data_viz as vf_viz
+import simulation.simulator as sim
 from scipy.interpolate import griddata
 
 vMax = 3 #m/s
@@ -20,18 +21,20 @@ sourceVF = vf.VectorField(vfFunc, vfBounds)
 
 uniformVF = vf.UniformVectorField((0,1), vfBounds)
 
-grid = vf_utils.SampleGrid(xDist, yDist, xGrid, yGrid)
+grid = vf_core.SampleGrid(xDist, yDist, xGrid, yGrid)
 
 fieldView = vf_viz.VectorFieldView(grid)
 fieldView.addField(sourceVF)
 
 gridX, gridY = grid.mgrid
 
-points = [(x, yDist / 2) for x in range(2, 100, 4)] + [(x, yDist / 3) for x in range(2, 100, 4)]
+points = [(x, yDist / 2) for x in range(2, 100, 4)]
 #points = [(50, 50)]
 #print(np.asarray(points))
 #print(list(sourceVF.sampleAtPoints(points)))
 #print(np.asarray(list(sourceVF.sampleAtPoints(points)))[:, 1])
+print(np.asarray(points))
+print(np.asarray(list(sourceVF.sampleAtPoints(points)))[:, 1])
 interpPriorY = griddata(np.asarray(points), np.asarray(list(sourceVF.sampleAtPoints(points)))[:, 1], (gridX, gridY), method="nearest")
 interpPriorX = griddata(np.asarray(points), np.asarray(list(sourceVF.sampleAtPoints(points)))[:, 0], (gridX, gridY), method="nearest")
 
@@ -45,7 +48,7 @@ measurementPrior = []
 for i in np.arange(0, numElements, 1):
 	point = (flatGridX[i], flatGridY[i])
 	vector = (flatInterpX[i], flatInterpY[i])
-	print(vector)
+	#print(vector)
 	measurementPrior.append((point, vector))
 
 
@@ -80,5 +83,33 @@ approxVF2 = vfEstimator.approximate()
 approxVF2.setValidBounds(vfBounds)
 
 fieldView.addField(approxVF2)
+
+#fieldView.showPlots()
+
+seedParticles = [(20,20), (50,50), (70,70)]
+
+simulator = sim.Simulator(sourceVF)
+tracks = simulator.simulate(seedParticles, 2, 0.5)
+
+print(np.asarray(tracks[0])[:,1])
+
+trackParser = vf_core.TrackParser()
+measurements = trackParser.tracksToMeasurements(tracks, 0.5)
+
+print(measurements)
+
+vfEstimator.clearMeasurements()
+vfEstimator.addMeasurements(measurements)
+
+approxVF3 = vfEstimator.approximate()
+approxVF3.setValidBounds(vfBounds)
+
+fieldView.addField(approxVF3)
+
+c = 0
+colors = ['red', 'blue', 'cyan', 'orange', 'green', 'black']
+for track in tracks:
+	fieldView.plotTrack(track, colors[c])
+	c+=1
 
 fieldView.showPlots()

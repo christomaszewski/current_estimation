@@ -1,5 +1,53 @@
 import numpy as np
 
+class Measurement(object):
+	""" Represents a single measurement of a vector field at a point
+
+	"""
+
+	def __init__(self, point, vector):
+		self.__point = point
+		self.__vector = vector
+
+	@property
+	def point(self):
+		return self.__point
+
+	@property
+	def vector(self):
+		return self.__vector
+	
+	
+
+class TrackParser(object):
+	""" Converts a list of particle positions with a known timestep to 
+		velocity field measurements
+
+	"""
+
+	def tracksToMeasurements(self, tracks, timestep):
+		measurements = []
+		for track in tracks:
+			measurements.extend(self.trackToMeasurements(track, timestep))
+
+		return measurements
+
+	def trackToMeasurements(self, track, timestep):
+		measurements = []
+		prevPoint = None
+		for point in track:
+			if prevPoint is not None:
+				vel = self.estimateVelocity(prevPoint, point, timestep)
+				measurements.append((prevPoint, vel))
+
+			prevPoint = point
+
+		return measurements
+
+	def estimateVelocity(self, p1, p2, timestep):
+		velocity = ((p2[0] - p1[0]) / timestep, (p2[1] - p1[1]) / timestep) 
+		return velocity		
+
 class SampleGrid(object):
 	""" Convenience class to represent a grid to be sampled over.
 		Also useful for plotting with quiver

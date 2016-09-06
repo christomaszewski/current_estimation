@@ -1,16 +1,43 @@
+from abc import ABCMeta, abstractmethod
 import numpy as np
 import vf_utils.vector_field as vf
+import vf_utils.core as vf_core
 
-class PolynomialLSApproxmiator(object):
+class VectorFieldApproximator(metaclass=ABCMeta):
+
+	@abstractmethod
+	def addMeasurement(self, measurement):
+		pass
+
+	@abstractmethod
+	def addMeasurements(self, measurements):
+		pass
+
+	@abstractmethod
+	def clearMeasurements(self):
+		pass
+
+	@abstractmethod
+	def approximate(self):
+		pass
+
+class PolynomialLSApproxmiator(VectorFieldApproximator):
 
 	def __init__(self, polyDegree=2):
+		""" Estimates vector field with 2nd order polynomials by default
+
+		"""
 		self.__polyDegree = polyDegree
 		self.__measurements = []
-
 
 	def addMeasurement(self, measurement):
 		self.__measurements.append(measurement)
 
+	def addMeasurements(self, measurements):
+		self.__measurements.extend(measurements)
+
+	def clearMeasurements(self):
+		self.__measurements.clear()
 
 	def approximate(self):
 		w = self.generateMonomialVector()
@@ -23,13 +50,15 @@ class PolynomialLSApproxmiator(object):
 		X = None
 		vx = None
 		vy = None
-		for (pi, vi) in self.__measurements:
+		for mi in self.__measurements:
+			pi = mi.point
 			wi = w(pi)
 			if(X is None):
 				X = wi.transpose()
 			else:
 				X = np.vstack((X, wi.transpose()))
 
+			vi = mi.vector
 			if(vx is None):
 				vx = vi[0]
 			else:
@@ -45,12 +74,12 @@ class PolynomialLSApproxmiator(object):
 			S += np.dot(wi, wi.transpose())
 			Sxy += vi[0]**2 + vi[1]**2
 
-		pseudoInvX = np.linalg.pinv(X)
-		a = np.dot(pseudoInvX, vx)
-		b = np.dot(pseudoInvX, vy)
+		#pseudoInvX = np.linalg.pinv(X)
+		#a = np.dot(pseudoInvX, vx)
+		#b = np.dot(pseudoInvX, vy)
 		pseudoInvS = np.linalg.pinv(S)
-		#a = np.dot(pseudoInvS,Sx)
-		#b = np.dot(pseudoInvS,Sy)
+		a = np.dot(pseudoInvS,Sx)
+		b = np.dot(pseudoInvS,Sy)
 		error = np.dot(a.transpose(),np.dot(S,a)) + np.dot(b.transpose(), np.dot(S,b))
 		- 2 * np.dot(a.transpose(),Sx) - 2 * np.dot(b.transpose(),Sy) + Sxy
 
@@ -58,9 +87,6 @@ class PolynomialLSApproxmiator(object):
 		approxVF = vf.VectorField(lambda x,y: (np.dot(w((x,y)).transpose(), a)[0][0], np.dot(w((x,y)).transpose(), b)[0][0]))
 
 		return approxVF
-
-	def clearMeasurements(self):
-		self.__measurements.clear()
 
 	def generateMonomialVector(self):
 		""" Returns a lambda function that can generate the monomial vector for any inputs x and y
@@ -76,7 +102,6 @@ class InterpolationBasedApproximator(object):
 	def __init__(self):
 		self.__measurements = []
 
-
 	def addMeasurement(self, measurement):
 		self.__measurements.append(measurement)
 
@@ -85,5 +110,8 @@ class InterpolationBasedApproximator(object):
 
 	def clearMeasurements(self):
 		self.__measurements.clear()
+
+	def approximate(self):
+		return None
 
 	
