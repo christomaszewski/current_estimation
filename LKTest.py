@@ -12,7 +12,7 @@ import cv2
 import glob
 import sys
 
-datasetDir = "C:\\Users\\ckt\\Documents\\datasets\\river\\imgs"
+datasetDir = "C:\\Users\\ckt\\Documents\\datasets\\river\\short"
 
 #sys.argv[1]
 
@@ -21,11 +21,13 @@ cv2.namedWindow('img', cv2.WINDOW_NORMAL)
 images = glob.glob(datasetDir + "\\*.tiff")
 list.sort(images)
 
+vfEstimator = vf_approx.PolynomialLSApproxmiator(2)
+
 lk_params = dict( winSize  = (15, 15),
                   maxLevel = 2,
                   criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03))
 
-feature_params = dict( maxCorners = 500,
+feature_params = dict( maxCorners = 1000,
                        qualityLevel = 0.3,
                        minDistance = 7,
                        blockSize = 7 )
@@ -44,3 +46,17 @@ for fileName in images:
 
 	timestamp += 0.033
 
+	for track in lkTracker.getTracks():
+		vfEstimator.addMeasurements(track.getMeasurements())
+
+	field = vfEstimator.approximate()
+	viz = img.copy()
+	cv2.polylines(viz, [np.int32(tr.getPointSequence()) for tr in lkTracker.getTracks()], False, (255, 0, 0))
+
+	cv2.imshow('img', viz)
+
+	ch = 0xFF & cv2.waitKey(1000)
+	if ch == 27:
+		break
+
+	#print(lkTracker.getTracks())

@@ -18,7 +18,7 @@ class Tracker(metaclass=ABCMeta):
 
 class LKOpticalFlowTracker(Tracker):
 
-	def __init__(self, lkParams, featureParams, detectionInterval=5):
+	def __init__(self, lkParams, featureParams, detectionInterval=0.1):
 		self.__lkParams = lkParams
 		self.__featureParams = featureParams
 
@@ -27,10 +27,12 @@ class LKOpticalFlowTracker(Tracker):
 
 		self.__activeTracks = []
 		self.__detectionInterval = detectionInterval
+		self.__prevDetectionTime = None
 
 		self.__deviationThreshold = 1
 
 	def processImage(self, img, timestamp):
+		# Todo: Check if input is already grayscale
 		grayImg = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
 		trackEndpoints = self.getTrackEndpoints()
@@ -38,13 +40,15 @@ class LKOpticalFlowTracker(Tracker):
 		newTracks = []
 
 		# If features have never been detected or detectionInverval has lapsed
-		if (self.__prevTimestamp is None or timestamp - self.__prevTimestamp > self.__detectionInterval):
+		if (self.__prevDetectionTime is None or timestamp - self.__prevDetectionTime > self.__detectionInterval):
+			print("Finding New Features")
+			self.__prevDetectionTime = timestamp
 			searchMask = np.zeros_like(grayImg)
 			searchMask[:] = 255
 
 			# Mask all the current track end points
-			for point in trackEndpoints:
-				cv2.circle(searchMask, point, 5, 0, -1)
+			for (x,y) in trackEndpoints:
+				cv2.circle(searchMask, (x,y), 5, 0, -1)
 
 			p = cv2.goodFeaturesToTrack(grayImg, mask=searchMask, **self.__featureParams)
 
@@ -72,7 +76,7 @@ class LKOpticalFlowTracker(Tracker):
 			# Check against max deviation threshold allowed
 			matchQuality = maxDev < self.__deviationThreshold
 
-			for (track, point, match) in zip(self.__activeTracks, nextPoints, matchQuality):
+			for (track, point, match) in zip(self.__activeTracks, nextPoints.reshape(-1,2), matchQuality):
 				if (match):
 					track.addObservation(point, timestamp)
 					newTracks.append(track)

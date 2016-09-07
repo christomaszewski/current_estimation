@@ -83,6 +83,7 @@ class Track(object):
 		for (timestamp, point) in self.__particlePositions:
 			if prevPoint is not None:
 				deltaT = timestamp - prevTime
+				#print(point, prevPoint)
 				xVel = (point[0] - prevPoint[0]) / deltaT
 				yVel = (point[1] - prevPoint[1]) / deltaT
 				vel = (xVel, yVel)

@@ -1,6 +1,17 @@
 import cv2
 import numpy as np
 
+class UniformGridFeatureDetector(object):
+	""" Class to run feature detector on an image in order to generate uniform
+		number of measurements in each grid cell across image. Used to deal with
+		feature rich regions hoarding entire feature quota
+
+	"""
+
+	def __init__(self):
+		# feature detector func, feature params, grid
+		
+
 class BoatDetector(object):
 
 	def __init__(self):

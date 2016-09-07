@@ -40,6 +40,10 @@ class PolynomialLSApproxmiator(VectorFieldApproximator):
 		self.__measurements.clear()
 
 	def approximate(self):
+		if (len(self.__measurements) < 1):
+			print("No Measurements Available")
+			return None
+			
 		w = self.generateMonomialVector()
 		monomialLength = int((self.__polyDegree + 1) * (self.__polyDegree + 2) / 2)
 
