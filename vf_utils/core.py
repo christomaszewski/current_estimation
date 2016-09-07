@@ -69,6 +69,8 @@ class Track(object):
 			between two consecutive particle locations
 			front: localize measurement on first point of consecutive point pairs
 			end: localize measurement on second point of consecutive point pairs
+
+			Should return empty list of measurements if 0 or 1 observations
 		"""
 		methodName = "__" + method
 		methodFunc = getattr(self, methodName, lambda p1, p2: p1)
@@ -106,10 +108,18 @@ class Track(object):
 		y = (p1[1] + p2[0]) / 2
 		return (x, y)
 	
+	def size(self):
+		return len(self.__particlePositions)
+
+	def getPointSequence(self):
+		return [obs[-1] for obs in self.__particlePositions]
+
 
 class TrackParser(object):
 	""" Converts a list of particle positions with a known timestep to 
 		velocity field measurements
+
+		Deprecated: use track objects
 
 	"""
 

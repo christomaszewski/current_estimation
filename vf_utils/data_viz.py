@@ -40,7 +40,7 @@ class VectorFieldView(object):
 
 	def plotTrack(self, track, color):
 		self.__lastAx.hold(True)
-		t = np.asarray(track)
+		t = np.asarray(track.getPointSequence())
 		self.__lastAx.scatter(t[:,0], t[:,1], c=color)
 		#self.plot()
 

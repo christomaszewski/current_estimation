@@ -37,4 +37,10 @@ fieldView = vf_viz.VectorFieldView(sampleGrid)
 fieldView.addField(sourceVF)
 fieldView.addField(approxVF)
 
+c = 0
+colors = ['red', 'blue', 'cyan', 'orange', 'green', 'black']
+for track in tracks:
+	fieldView.plotTrack(track, colors[c])
+	c+=1
+
 fieldView.showPlots()
