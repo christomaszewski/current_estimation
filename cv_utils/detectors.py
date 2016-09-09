@@ -8,9 +8,54 @@ class UniformGridFeatureDetector(object):
 
 	"""
 
-	def __init__(self):
-		# feature detector func, feature params, grid
-		
+	def __init__(self, detector, mask, params, gridDim, numFeatures=None):
+		# only supports cv2.goodFeaturesToTrack right now
+		# numFeatures overrides equivalent parameter in params if set 
+		# todo: add support for ORB
+		self.__featureDetector = detector
+		self.__detectorParams = params
+		self.__searchMask = mask
+		self.__numFeatures = numFeatures
+
+		self.__gridDimensions = gridDim
+
+		self.__numCells = gridDim[0] * gridDim[1]
+
+		self.__featuresPerCell = int(numFeatures / self.__numCells)
+
+
+	def detect(self, img):
+		features = np.array([])
+
+		width = img.shape[1]
+		height = img.shape[0]
+		heightStep = int(height / self.__gridDimensions[0])
+		widthStep = int(width / self.__gridDimensions[1])
+
+		self.__detectorParams['maxCorners'] = self.__featuresPerCell
+		#print(width, height, widthStep, heightStep)
+		for i in np.arange(0, height, heightStep):
+			for j in np.arange(0, width, widthStep):
+				#print(i, j)
+				subMask = np.zeros_like(self.__searchMask)
+				subMask[i:(i+heightStep), j:(j+widthStep)] = self.__searchMask[i:(i+heightStep), j:(j+widthStep)]
+				subImg = img
+				#subMask = self.__searchMask[i:(i+heightStep), j:(j+widthStep)]
+				#subImg = img[i:(i+heightStep), j:(j+widthStep)]
+				newFeatures = self.__featureDetector(subImg, mask=subMask, **self.__detectorParams)
+
+				if (features is not None and features.size < 1):
+					# No previously found features
+					features = newFeatures
+				elif (newFeatures is not None):
+					# New features found
+					#print(newFeatures)
+
+					#newFeatures += np.array([i, j])
+					#print(newFeatures)
+					features = np.concatenate((features, newFeatures))
+
+		return features
 
 class BoatDetector(object):
 

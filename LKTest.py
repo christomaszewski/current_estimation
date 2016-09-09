@@ -46,10 +46,10 @@ for fileName in images:
 
 	timestamp += 0.033
 
-	for track in lkTracker.getTracks():
-		vfEstimator.addMeasurements(track.getMeasurements())
+	#for track in lkTracker.getTracks():
+	#	vfEstimator.addMeasurements(track.getMeasurements())
 
-	field = vfEstimator.approximate()
+	#field = vfEstimator.approximate()
 	viz = img.copy()
 	cv2.polylines(viz, [np.int32(tr.getPointSequence()) for tr in lkTracker.getTracks()], False, (255, 0, 0))
 

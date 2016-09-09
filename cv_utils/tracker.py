@@ -4,6 +4,7 @@ import numpy as np
 import cv2
 
 import vf_utils.core as vf_core
+import cv_utils.detectors as cv_detectors
 
 class Tracker(metaclass=ABCMeta):
 
@@ -50,7 +51,11 @@ class LKOpticalFlowTracker(Tracker):
 			for (x,y) in trackEndpoints:
 				cv2.circle(searchMask, (x,y), 5, 0, -1)
 
-			p = cv2.goodFeaturesToTrack(grayImg, mask=searchMask, **self.__featureParams)
+			gridDetector = cv_detectors.UniformGridFeatureDetector(cv2.goodFeaturesToTrack,
+				searchMask, self.__featureParams, (5,5), 1000)
+
+			#p = cv2.goodFeaturesToTrack(grayImg, mask=searchMask, **self.__featureParams)
+			p = gridDetector.detect(grayImg)
 
 			if (p is not None):
 				for x, y in np.float32(p).reshape(-1, 2):
