@@ -1,61 +1,110 @@
 import cv2
 import numpy as np
 
-class UniformGridFeatureDetector(object):
+class GridFeatureDetector(object):
 	""" Class to run feature detector on an image in order to generate uniform
 		number of measurements in each grid cell across image. Used to deal with
 		feature rich regions hoarding entire feature quota
 
+		Currently runs very slow - needs better structure/optimization
+
 	"""
 
-	def __init__(self, detector, mask, params, gridDim, numFeatures=None):
+	def __init__(self, detector, gridDim=(2,2), partitionMethod='subimage'):
 		# only supports cv2.goodFeaturesToTrack right now
-		# numFeatures overrides equivalent parameter in params if set 
+		# partitionMethod subimage is fastest method
 		# todo: add support for ORB
 		self.__featureDetector = detector
-		self.__detectorParams = params
-		self.__searchMask = mask
-		self.__numFeatures = numFeatures
 
+		partitionFuncName = '_' + partitionMethod
+		self.__partitionFunc = getattr(self, partitionFuncName, self._nopartition)
+
+		self.setGrid(gridDim)
+
+	def setGrid(self, gridDim):
 		self.__gridDimensions = gridDim
-
 		self.__numCells = gridDim[0] * gridDim[1]
 
-		self.__featuresPerCell = int(numFeatures / self.__numCells)
+	def detect(self, img, mask, params, numFeatures=None):
+		if ('maxCorners' in params):
+			# goodFeaturesToTrack parameter
+			self.__numTotalFeatures = params['maxCorners']
+		elif (numFeatures is not None):
+			self.__numTotalFeatures = numFeatures
+		else:
+			# Default number of features
+			self.__numTotalFeatures = 1000
 
+		self.__numFeaturesPerCell = int(self.__numTotalFeatures / self.__numCells)
 
-	def detect(self, img):
-		features = np.array([])
+		heightStep = int(img.shape[0] / self.__gridDimensions[0])
+		widthStep = int(img.shape[1] / self.__gridDimensions[1])
 
-		width = img.shape[1]
-		height = img.shape[0]
-		heightStep = int(height / self.__gridDimensions[0])
-		widthStep = int(width / self.__gridDimensions[1])
+		paramCopy = params.copy()
 
-		self.__detectorParams['maxCorners'] = self.__featuresPerCell
-		#print(width, height, widthStep, heightStep)
-		for i in np.arange(0, height, heightStep):
-			for j in np.arange(0, width, widthStep):
-				#print(i, j)
-				subMask = np.zeros_like(self.__searchMask)
-				subMask[i:(i+heightStep), j:(j+widthStep)] = self.__searchMask[i:(i+heightStep), j:(j+widthStep)]
-				subImg = img
-				#subMask = self.__searchMask[i:(i+heightStep), j:(j+widthStep)]
-				#subImg = img[i:(i+heightStep), j:(j+widthStep)]
-				newFeatures = self.__featureDetector(subImg, mask=subMask, **self.__detectorParams)
+		features = self.__partitionFunc(img, mask, paramCopy, heightStep, widthStep)
 
-				if (features is not None and features.size < 1):
-					# No previously found features
+		return features
+
+	# Partition Functions
+	def _mask(self, img, mask, params, heightStep, widthStep):
+		# Set desired number of features to features per cell
+		params['maxCorners'] = self.__numFeaturesPerCell
+
+		# Declare features array
+		features = None
+
+		# Define full mask
+		searchMask = np.zeros_like(mask)
+
+		for i in np.arange(0, img.shape[0], heightStep):
+			for j in np.arange(0, img.shape[1], widthStep):
+				searchMask[i:(i+heightStep), j:(j+widthStep)] = mask[i:(i+heightStep), j:(j+widthStep)]
+
+				newFeatures = self.__featureDetector(img, mask=searchMask, **params)
+
+				# Reset search mask 
+				searchMask[i:(i+heightStep), j:(j+widthStep)] = 0
+
+				if (features is None):
 					features = newFeatures
 				elif (newFeatures is not None):
-					# New features found
-					#print(newFeatures)
-
-					#newFeatures += np.array([i, j])
-					#print(newFeatures)
 					features = np.concatenate((features, newFeatures))
 
 		return features
+
+	
+	def _subimage(self, img, mask, params, heightStep, widthStep):
+		# Set desired number of features to features per cell
+		params['maxCorners'] = self.__numFeaturesPerCell
+
+		# Declare features array
+		features = None
+
+		for i in np.arange(0, img.shape[0], heightStep):
+			for j in np.arange(0, img.shape[1], widthStep):
+				searchMask = mask[i:(i+heightStep), j:(j+widthStep)]
+				subImg = img[i:(i+heightStep), j:(j+widthStep)]
+
+				newFeatures = self.__featureDetector(subImg, mask=searchMask, **params)
+
+				if (newFeatures is not None):
+					newFeatures += np.array([j, i])
+
+					if (features is None):
+						features = newFeatures
+					else:
+						features = np.concatenate((features, newFeatures))
+
+		return features
+
+	def _nopartition(self, img, mask, params, heightStep, widthStep):
+		params['maxCorners'] = self.__numTotalFeatures
+
+		features = self.__featureDetector(img, mask=mask, **params)
+
+		return features
+
 
 class BoatDetector(object):
 

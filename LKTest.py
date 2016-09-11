@@ -12,7 +12,7 @@ import cv2
 import glob
 import sys
 
-datasetDir = "C:\\Users\\ckt\\Documents\\datasets\\river\\short"
+datasetDir = "C:\\Users\\ckt\\Documents\\datasets\\river\\test"
 
 #sys.argv[1]
 
@@ -24,12 +24,12 @@ list.sort(images)
 vfEstimator = vf_approx.PolynomialLSApproxmiator(2)
 
 lk_params = dict( winSize  = (15, 15),
-                  maxLevel = 2,
+                  maxLevel = 5,
                   criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03))
 
-feature_params = dict( maxCorners = 1000,
+feature_params = dict( maxCorners = 500,
                        qualityLevel = 0.3,
-                       minDistance = 7,
+                       minDistance = 5,
                        blockSize = 7 )
 
 
@@ -55,7 +55,7 @@ for fileName in images:
 
 	cv2.imshow('img', viz)
 
-	ch = 0xFF & cv2.waitKey(1000)
+	ch = 0xFF & cv2.waitKey(1)
 	if ch == 27:
 		break
 

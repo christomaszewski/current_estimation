@@ -6,9 +6,10 @@ class Measurement(object):
 
 	"""
 
-	def __init__(self, point, vector):
+	def __init__(self, point, vector, score=0.0):
 		self.__point = point
 		self.__vector = vector
+		self.__score = score
 
 	@property
 	def point(self):
@@ -60,7 +61,14 @@ class Track(object):
 		(time, position) = self.__particlePositions[-1]
 		return position
 
-	def getMeasurements(self, method='midpoint'):
+	def size(self):
+		return len(self.__particlePositions)
+
+	def getPointSequence(self):
+		# Todo: change return format for easy plotting
+		return [obs[-1] for obs in self.__particlePositions]
+
+	def getMeasurements(self, method='midpoint', scoring='time'):
 		""" Returns list of measurements representing velocity of particle
 			localizing the measurement using the method specified. Velocity
 			is computed by comparing pairs on consecutive points.
@@ -72,8 +80,12 @@ class Track(object):
 
 			Should return empty list of measurements if 0 or 1 observations
 		"""
-		methodName = "__" + method
-		methodFunc = getattr(self, methodName, lambda p1, p2: p1)
+		methodFuncName = "_" + method
+		methodFunc = getattr(self, methodFuncName, lambda p1, p2: p1)
+		scoringFuncName = "_" + scoring
+		scoringFunc = getattr(self, scoringFuncName, lambda: 0.0)
+
+		score = scoringFunc()
 
 		measurements = []
 
@@ -98,54 +110,26 @@ class Track(object):
 
 		return measurements
 
-	def __first(self, p1, p2):
+	# Method Functions
+	def _first(self, p1, p2):
 		return p1
 
-	def __last(self, p1, p2):
+	def _last(self, p1, p2):
 		return p2
 
-	def __midpoint(self, p1, p2):
+	def _midpoint(self, p1, p2):
 		x = (p1[0] + p2[0]) / 2
 		y = (p1[1] + p2[0]) / 2
 		return (x, y)
 	
-	def size(self):
-		return len(self.__particlePositions)
+	# Scoring Functinns
+	def _time(self):
+		# Length of track in time
+		return self.__particlePositions[-1][0]
 
-	def getPointSequence(self):
-		return [obs[-1] for obs in self.__particlePositions]
-
-
-class TrackParser(object):
-	""" Converts a list of particle positions with a known timestep to 
-		velocity field measurements
-
-		Deprecated: use track objects
-
-	"""
-
-	def tracksToMeasurements(self, tracks, timestep):
-		measurements = []
-		for track in tracks:
-			measurements.extend(self.trackToMeasurements(track, timestep))
-
-		return measurements
-
-	def trackToMeasurements(self, track, timestep):
-		measurements = []
-		prevPoint = None
-		for point in track:
-			if prevPoint is not None:
-				vel = self.estimateVelocity(prevPoint, point, timestep)
-				measurements.append((prevPoint, vel))
-
-			prevPoint = point
-
-		return measurements
-
-	def estimateVelocity(self, p1, p2, timestep):
-		velocity = ((p2[0] - p1[0]) / timestep, (p2[1] - p1[1]) / timestep) 
-		return velocity		
+	def _length(self):
+		# Length of track in number of measurements
+		return self.size()
 
 class SampleGrid(object):
 	""" Convenience class to represent a grid to be sampled over.
