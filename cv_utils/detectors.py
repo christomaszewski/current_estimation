@@ -107,6 +107,10 @@ class GridFeatureDetector(object):
 
 
 class BoatDetector(object):
+	""" Detector for boat with Blue painted front plate and Red painted back plate
+
+		todo: produce track object 
+	"""
 
 	def __init__(self):
 		self.lowerBlue = np.array([100,50,50], np.uint8)

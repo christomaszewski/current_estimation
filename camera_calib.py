@@ -3,9 +3,11 @@ import cv2
 import glob
 import pickle
 
+# Deprecated file, most functionality found in cv_utils.calibration
+
 
 # termination criteria
-criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.00001)
+criteria = (cv2.TERM_CRITERIA_MAX_ITER + cv2.TERM_CRITERIA_EPS, 30, 0.00001)
 
 # prepare object points, like (0,0,0), (1,0,0), (2,0,0) ....,(6,5,0)
 objp = numpy.zeros((1,6*9,3), numpy.float32)

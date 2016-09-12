@@ -19,6 +19,13 @@ class Measurement(object):
 	def vector(self):
 		return self.__vector
 	
+	@property
+	def score(self):
+		return self.__score
+
+	def __cmp__(self, other):
+		# Negative so we can use minheap as maxheap
+		return -(cmp(self.score, other.score))
 
 class Track(object):
 	""" Represents a single particle/point on an object tracked over some 
