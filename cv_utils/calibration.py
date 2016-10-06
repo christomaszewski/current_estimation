@@ -3,6 +3,8 @@ import pickle
 import glob
 import numpy as np
 
+import vf_utils.core as vf_core
+
 class FisheyeCameraModel(object):
 	""" Class for loading calibration settings and rectifying images accordingly
 
@@ -13,6 +15,8 @@ class FisheyeCameraModel(object):
 		self.__K = camIntrinsics
 		self.__D = distortionCoeff
 
+		self.__newK = camIntrinsics
+
 	def loadModel(self, fileName):
 		with open(fileName, 'rb') as f:
 			(self.__K, self.__D) = pickle.load(f)
@@ -22,20 +26,41 @@ class FisheyeCameraModel(object):
 			pickle.dump((self.__K, self.__D), f)
 
 	def undistortPoints(self, points):
-		undistorted = cv2.fisheye.undistortPoints(points, self.__K, self.__D)
+		undistorted = cv2.fisheye.undistortPoints(points, self.__K, self.__D, p=self.__newK)
 
-	def undistortImage(self, img):
+	def undistortImage(self, img, crop=False):
 		undistortedSize = img.shape[:2]
+		newK = self.__K
+
+		newK = cv2.fisheye.estimateNewCameraMatrixForUndistortRectify(self.__K,
+			self.__D, undistortedSize, np.eye(3), balance=1.0, new_size=undistortedSize,
+			fov_scale=1.25)
+
+		# Reset to center of image for now
+		newK[0,2] = undistortedSize[0] / 2
+		newK[1,2] = undistortedSize[1] / 2
+
+		self.__newK = newK
 
 		map1, map2 = cv2.fisheye.initUndistortRectifyMap(self.__K, self.__D, np.eye(3),
-			self.__K, undistortedSize, cv2.CV_16SC2)
+			newK, undistortedSize, cv2.CV_16SC2)
 
 		undistorted = cv2.remap(img, map1, map2,
 			interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
-		#rectified = cv2.remap(img, self.__camIntrinsics[0], self.__camIntrinsics[1],
-		#	 interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
+
+		if (crop):
+			h, w = undistortedSize
+			wMid = w / 2
+			hMid = h / 2
+			print(wMid)
+			cropped = undistorted[wMid-550:wMid+550,:]
+			undistorted = cropped
 
 		return undistorted
+
+	def undistortTrack(self, track):
+		undistortedTrack = track
+		return undistortedTrack
 
 
 
@@ -78,7 +103,7 @@ class FisheyeCalibration(object):
 				objPoints.append(self.__objPoints)
 
 				# todo: check if window size needs to adjust based on checkerboard
-				returnVal = cv2.cornerSubPix(grayImg, corners, (11, 11), (-1, -1), self.__termCrit)
+				corners = cv2.cornerSubPix(grayImg, corners, (11, 11), (-1, -1), self.__termCrit)
 				imgPoints.append(corners.reshape(1, -1, 2))
 			else:
 				print("Could not find corners in image", fileName)
@@ -88,10 +113,12 @@ class FisheyeCalibration(object):
 		tvecs = [np.zeros((1, 1, 3), dtype=np.float64) for i in range(numImgPoints)]
 
 		print("Finished processing images, computing model")
+		# 512 should correspond to missing cv2.fisheye.CALIB_FIX_PRINCIPAL_POINT = 1 << 9
 		err, _, _, _, _ = cv2.fisheye.calibrate(objPoints, imgPoints, grayImg.shape[::-1],
 			self.__K, self.__D, rvecs, tvecs,
-			cv2.fisheye.CALIB_RECOMPUTE_EXTRINSIC+cv2.fisheye.CALIB_FIX_SKEW, 
+			cv2.fisheye.CALIB_RECOMPUTE_EXTRINSIC+cv2.fisheye.CALIB_FIX_SKEW+512, 
 			self.__termCrit)
+
 
 		fisheyeCam = FisheyeCameraModel(self.__K, self.__D)
 

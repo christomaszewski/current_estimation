@@ -109,14 +109,18 @@ class GridFeatureDetector(object):
 class BoatDetector(object):
 	""" Detector for boat with Blue painted front plate and Red painted back plate
 
-		todo: produce track object 
+		Todo: produce track object 
+
+		Todo: learn thresholds from labelled dataset or load from calib file
 	"""
 
 	def __init__(self):
 		self.lowerBlue = np.array([100,50,50], np.uint8)
-		self.upperBlue = np.array([110,255,255], np.uint8)
-		self.lowerRed = np.array([0,50,50], np.uint8)
-		self.upperRed = np.array([10,255,255], np.uint8)
+		self.upperBlue = np.array([130,255,255], np.uint8)
+		self.lowerRed = np.array([160,50,50], np.uint8)
+		self.upperRed = np.array([190,255,255], np.uint8)
+		self.lowerRed2 = np.array([0,50,50], np.uint8)
+		self.upperRed2 = np.array([10,255,255], np.uint8)
 		self.midpoint  = (0,0)
 
 	def detect(self, img):
@@ -126,6 +130,8 @@ class BoatDetector(object):
 		# Find image regions which fall into blue and red ranges
 		blueMask = cv2.inRange(hsv, self.lowerBlue, self.upperBlue)
 		redMask = cv2.inRange(hsv, self.lowerRed, self.upperRed)
+		redMask2 = cv2.inRange(hsv, self.lowerRed2, self.upperRed2)
+		redMask = cv2.addWeighted(redMask, 1.0, redMask2, 1.0, 0.0)
 
 		# Erode and dilate mask to remove spurious detections
 		blueMask = cv2.erode(blueMask, None, iterations=2)
@@ -136,6 +142,7 @@ class BoatDetector(object):
 		
 		# If no blue contours find, terminate (Boat not in frame)
 		if (len(blueContours) < 1):
+			print("Blue Contour Not Found")
 			return False
 
 		# Choose largest blue contour
@@ -154,6 +161,7 @@ class BoatDetector(object):
 
 		# If no red contours find, terminate (Boat not in frame)
 		if (len(redContours) < 1):
+			print("Red Contour Not Found")
 			return False
 
 		# Choose largest red contour
@@ -168,9 +176,9 @@ class BoatDetector(object):
 
 
 		# If distance between centroids of detected panels matches boat report detection
-		if (dist >= 40 and dist <= 60):
-			cv2.drawContours(img,maxBlue,-1,(0,0,255),3)
-			cv2.drawContours(img,maxRed,-1,(255,0,0),3)
+		if (dist >= 5 and dist <= 30):
+			cv2.drawContours(img,maxBlue,-1,(0,0,255),7)
+			cv2.drawContours(img,maxRed,-1,(255,0,0),7)
 
 			cv2.circle(img, redCentroid, 5, (0,0,0), thickness=-1, lineType=8, shift=0)
 			cv2.circle(img, blueCentroid, 5, (0,0,0), thickness=-1, lineType=8, shift=0)

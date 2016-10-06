@@ -27,6 +27,18 @@ class Measurement(object):
 		# Negative so we can use minheap as maxheap
 		return -(cmp(self.score, other.score))
 
+	def __lt__(self, other):
+		return self.score < other.score
+
+	def __gt__(self, other):
+		return self.score > other.score
+
+	def __radd__(self, other):
+		return self.score + other
+
+	def __add__(self, other):
+		return self.score + other
+
 class Track(object):
 	""" Represents a single particle/point on an object tracked over some 
 		period of time. Can be used to produce vector field measurements
@@ -51,6 +63,18 @@ class Track(object):
 			else:
 				self.__startTime = time
 
+	def __getitem__(self, index):
+		""" Overrides [] operator to return the observation at index
+
+			time of observation is compensated with start time to get
+			absolute observation
+		"""
+		if (index >= len(self.__particlePositions)):
+			# Index out of bounds
+			return None
+		(time, position) = self.__particlePositions[index]
+		return (self.__startTime + time, position)
+
 	def addObservation(self, particlePos, time=None):
 		if (time is None):
 			time = time.time()
@@ -62,6 +86,10 @@ class Track(object):
 		self.__particlePositions.append((offsetTime, particlePos))
 
 	def getLastObservation(self):
+		""" Currently just returns the position of the last observation
+
+			Needs to be updated to return an observation with time as well
+		"""
 		if (len(self.__particlePositions) < 1):
 			return (None, None)
 
@@ -109,7 +137,7 @@ class Track(object):
 
 				measurementPoint = methodFunc(prevPoint, point)
 
-				m = Measurement(measurementPoint, vel)
+				m = Measurement(measurementPoint, vel, score)
 				measurements.append(m)
 
 			prevPoint = point
@@ -126,7 +154,7 @@ class Track(object):
 
 	def _midpoint(self, p1, p2):
 		x = (p1[0] + p2[0]) / 2
-		y = (p1[1] + p2[0]) / 2
+		y = (p1[1] + p2[1]) / 2
 		return (x, y)
 	
 	# Scoring Functinns

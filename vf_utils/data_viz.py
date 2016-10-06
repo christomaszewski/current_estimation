@@ -9,10 +9,16 @@ class VectorFieldView(object):
 		self.__grid = grid
 		self.__fieldArray = []
 		self.__lastAx = None
+		self._timeStamp = None
 		
 	def addField(self, vectorfield):
 		self.__fieldArray.append(vectorfield)
 		self.plot()
+
+	def clearFields(self):
+		self.__fieldArray.clear()
+		#self.__fig = plt.figure()
+		#self.plot()
 
 	def changeGrid(self, grid):
 		self.__grid = grid
@@ -44,9 +50,26 @@ class VectorFieldView(object):
 		self.__lastAx.scatter(t[:,0], t[:,1], c=color)
 		#self.plot()
 
+	def plotBoatTrack(self, track):
+		self.__lastAx.hold(True)
+		t = np.asarray(track.getPointSequence())
+		self.__lastAx.scatter(t[:,0], t[:,1], c=color)
+
+
 	def showPlots(self):
 		#self.plot()
 		plt.show()
 
 	def closePlots(self):
 		plt.close(self.__fig)
+		self.__fig = plt.figure()
+
+	def saveFig(self, filename, timestamp=None):
+		annotation = "Time: "
+		if (timestamp is not None):
+			annotation += str(timestamp)
+		else:
+			annotation = ""
+		
+		self.__lastAx.text(85, 95, annotation)
+		self.__fig.savefig(filename, bbox_inches='tight')

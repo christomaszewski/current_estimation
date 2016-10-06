@@ -1,7 +1,7 @@
 import cv2
 import sys
 
-import cv_utils.calibration as cv_calib
+from context import cv_calib
 
 #todo: add help and checking that both parameters have been passed
 calibImgDir = sys.argv[1]

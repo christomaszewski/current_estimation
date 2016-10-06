@@ -15,14 +15,20 @@ class VectorField(object):
 		if (fieldFunction is not None):
 			self._field = fieldFunction
 
-		if (fieldBounds is not None):
-			self._bounds = fieldBounds
+		self._bounds = fieldBounds
 
 	def sampleAtPoint(self, point):
 		""" Returns the value of the vector field at the 
 			point provided
 
 			todo: add bounds check
+		"""
+
+		"""if (self._bounds is not None):
+			if (point[0] >= self._bounds[0] and point[0] <= self._bounds[1] and point[1] >= self._bounds[2] and point[1] <= self._bounds[3]):
+				return self._field(point[0], point[1])
+			else:
+				return (0,0)
 		"""
 
 		return self._field(point[0], point[1])
@@ -41,8 +47,8 @@ class VectorField(object):
 
 			todo: check that grid lies within bounds
 		"""
-
-		vectorizedField = np.vectorize(self._field)
+		wrapper = lambda x,y: self.sampleAtPoint((x,y))
+		vectorizedField = np.vectorize(wrapper)
 
 		return vectorizedField(gridX, gridY)
 
@@ -93,6 +99,13 @@ class VectorField(object):
 	def bounds(self):
 		return self._bounds
 	
+	def __add__(self, other):
+		newFunc = lambda x, y: tuple(map(sum, zip(self._field(x,y), other.sampleAtPoint((x,y)))))
+		return VectorField(newFunc, self._bounds)
+
+	def __radd__(self, other):
+		newFunc = lambda x, y: tuple(map(sum, zip(self._field(x,y), other.sampleAtPoint((x,y)))))
+		return VectorField(newFunc, self._bounds)
 
 class UniformVectorField(VectorField):
 	""" Standard vector field representing uniform flow in given direction
@@ -111,12 +124,29 @@ class DevelopedPipeFlowField(VectorField):
 
 	"""
 
-	def __init__(self, width, vMax, fieldBounds=None):
+	def __init__(self, width, vMax, fieldBounds=None, offset=0):
 		self.__channelWidth = width
 		self.__maxVelocity = vMax
 
 		self._field = lambda x, y: (0, 
-			((4 * x / self.__channelWidth - 4 * x**2 / self.__channelWidth**2) * self.__maxVelocity))
+			((4 * (x - offset) / self.__channelWidth - 4 * (x - offset)**2 / self.__channelWidth**2) * self.__maxVelocity))
 
 		if (fieldBounds is not None):
 			self._bounds = fieldBounds
+
+class PieceWiseFlowField(VectorField):
+	""" Represents piecewise combination of multiple fields
+
+	"""
+
+	def __init__(self, field1, field2, bounds1, bounds2):
+		self._field1 = field1
+		self._field2 = field2
+		self._bounds1 = bounds1
+		self._bounds2 = bounds2
+
+	def sampleAtPoint(self, point):
+		if (point[0] <= self._bounds1[1]):
+			return self._field1.sampleAtPoint(point)
+		else:
+			return self._field2.sampleAtPoint(point)
