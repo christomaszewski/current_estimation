@@ -20,6 +20,13 @@ class PolynomialLSApproxmiator(VectorFieldApproximator):
 		super().clearMeasurements()
 
 	def approximate(self, bounds=None):
+		""" Polynomial Least Squares Regression according to Lage et al.
+
+			"Vector field reconstruction from sparse samples with applications," 
+			2014 27th SIBGRAPI Conference on Graphics, Patterns and Images, pp. 297-306, 
+			XIX Brazilian Symposium on Computer Graphics and Image Processing (SIBGRAPI'06), 2006
+
+		"""
 		if (len(self._measurements) < 1):
 			print("No Measurements Available")
 			return None

@@ -7,21 +7,21 @@ class Measurement(object):
 	"""
 
 	def __init__(self, point, vector, score=0.0):
-		self.__point = point
-		self.__vector = vector
-		self.__score = score
+		self._point = point
+		self._vector = vector
+		self._score = score
 
 	@property
 	def point(self):
-		return self.__point
+		return self._point
 
 	@property
 	def vector(self):
-		return self.__vector
+		return self._vector
 	
 	@property
 	def score(self):
-		return self.__score
+		return self._score
 
 	def __cmp__(self, other):
 		# Negative so we can use minheap as maxheap
@@ -38,6 +38,12 @@ class Measurement(object):
 
 	def __add__(self, other):
 		return self.score + other
+
+	def __str__(self):
+		return "[" + str(self.point) + "," + str(self.vector) + "]"
+
+	def __repr__(self):
+		return str(self)
 
 class Track(object):
 	""" Represents a single particle/point on an object tracked over some 
