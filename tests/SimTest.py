@@ -1,46 +1,55 @@
-import numpy as np
 import matplotlib.pyplot as plt
-import vf_utils.vector_field as vf
-import vf_utils.approximate as vf_approx
-import vf_utils.core as vf_core
-import vf_utils.data_viz as vf_viz
+import numpy as np
 
-import simulation.simulator as sim
+from context import LSPIV_toolkit
+
+import LSPIV_toolkit.core.vf.fields as field_lib
+import LSPIV_toolkit.core.utils as vf_utils
+import LSPIV_toolkit.sim as vf_sim
+
+plt.ion()
 
 vMax = 3 #m/s
 riverWidth = 100 #meters
 
-vfBounds = [0, riverWidth, 0, riverWidth]
-sourceVF = vf.DevelopedPipeFlowField(riverWidth, vMax, vfBounds)
+sourceVF = field_lib.DevelopedPipeFlowField(riverWidth, vMax)
 
 xGrid = 25 #cells
 yGrid = 8 #cells
 xDist = 100 #meters
 yDist = 100 #meters
 
-sampleGrid = vf_core.SampleGrid(xDist, yDist, xGrid, yGrid)
+grid = vf_utils.SampleGrid(xDist, yDist, xGrid, yGrid)
 
-seedParticles = [(20,20), (50,50), (70,70)]
-particleSim = sim.ParticleSimulator(sourceVF)
+seedParticles = [(0, (5, 5)), (0, (15, 5)), (0, (25, 5)), (0, (35, 5)), (0, (45, 5)),
+				(0, (55, 5)), (0, (65, 5)), (0, (75, 5)), (0, (85, 5)), (0, (95, 5))]
 
-tracks = particleSim.simulate(seedParticles, time=2, timestep=0.5)
+simulator = vf_sim.simulators.ParticleSimulator(sourceVF)
 
-vfEstimator = vf_approx.PolynomialLSApproxmiator(2)
+tracks = simulator.simulate(seedParticles, time=2, timestep=0.5)
+grid = vf_utils.SampleGrid(xDist, yDist, xGrid, yGrid)
 
-for track in tracks:
-	vfEstimator.addMeasurements(track.getMeasurements())
+xSamples, ySamples = sourceVF.sampleGrid(grid)
 
-approxVF = vfEstimator.approximate()
-approxVF.setValidBounds(vfBounds)
+magnitude = np.sqrt(xSamples**2 + ySamples**2)
 
-fieldView = vf_viz.VectorFieldView(sampleGrid)
-fieldView.addField(sourceVF)
-fieldView.addField(approxVF)
+xgrid, ygrid = grid.mgrid
+fig = plt.figure()
+ax = fig.add_subplot(1,1,1)
+ax.quiver(xgrid, ygrid, xSamples, ySamples, magnitude, cmap=plt.cm.jet)
+ax.axis(sourceVF.plotExtents)
+
+plt.show()
+
+ax.hold(True)
 
 c = 0
-colors = ['red', 'blue', 'cyan', 'orange', 'green', 'black']
+colors = ['red', 'blue', 'cyan', 'orange', 'green', 'black', 'yellow', 'purple', 'brown']
 for track in tracks:
-	fieldView.plotTrack(track, colors[c])
-	c+=1
+	t = np.asarray(track.getPointSequence())
+	ax.scatter(t[:,0], t[:,1], c=colors[c])
+	c = (c+1) % len(colors)
 
-fieldView.showPlots()
+plt.show()
+
+fig.savefig("SimTest.png", bbox_inches='tight')

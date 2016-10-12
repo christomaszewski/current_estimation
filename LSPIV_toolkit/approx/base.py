@@ -1,6 +1,4 @@
 from abc import ABCMeta, abstractmethod
-from .. import vector_field as vf
-from .. import core as vf_core
 
 class VectorFieldApproximator(metaclass=ABCMeta):
 

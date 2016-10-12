@@ -1,3 +1,6 @@
+import numpy as np
+
+from ..core import vf
 from .base import VectorFieldApproximator
 
 class PolynomialLSApproxmiator(VectorFieldApproximator):
@@ -19,7 +22,7 @@ class PolynomialLSApproxmiator(VectorFieldApproximator):
 	def clearMeasurements(self):
 		super().clearMeasurements()
 
-	def approximate(self, bounds=None):
+	def approximate(self, fieldExtents=None):
 		""" Polynomial Least Squares Regression according to Lage et al.
 
 			"Vector field reconstruction from sparse samples with applications," 
@@ -75,7 +78,11 @@ class PolynomialLSApproxmiator(VectorFieldApproximator):
 		- 2 * np.dot(a.transpose(),Sx) - 2 * np.dot(b.transpose(),Sy) + Sxy
 
 		print("Error: ", str(error))
-		approxVF = vf.VectorField(lambda x,y: (np.dot(w((x,y)).transpose(), a)[0][0], np.dot(w((x,y)).transpose(), b)[0][0]), bounds)
+		vfFunc = lambda x,y: (np.dot(w((x,y)).transpose(), a)[0][0], np.dot(w((x,y)).transpose(), b)[0][0])
+
+		vfRep = vf.representation.VectorFieldRepresentation(vfFunc, fieldExtents)
+
+		approxVF = vf.fields.VectorField(vfRep)
 
 		return approxVF
 

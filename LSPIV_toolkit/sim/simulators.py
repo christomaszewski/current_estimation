@@ -1,6 +1,6 @@
 import numpy as np
-import vf_utils.vector_field as vf
-import vf_utils.core as vf_core
+
+from .. import core as vf_core
 
 class ParticleSimulator(object):
 	""" Todo: allow simulator to propagate existing tracks forward in time
@@ -9,7 +9,7 @@ class ParticleSimulator(object):
 	"""
 
 	def __init__(self, vectorField):
-		self.__flowField = vectorField
+		self._flowField = vectorField
 
 
 	def simulate(self, seedParticles, time, timestep):
@@ -18,10 +18,10 @@ class ParticleSimulator(object):
 			if (timeSeen > time):
 				continue
 				
-			track = vf_core.Track(particlePos=particle, time=timeSeen)
+			track = vf_core.tracking.Track(particlePos=particle, time=timeSeen)
 			for t in np.arange(timeSeen + timestep, time, timestep):
 				particlePos = track.getLastObservation()
-				particleVel  = self.__flowField.sampleAtPoint(particlePos)
+				particleVel  = self._flowField.sampleAtPoint(particlePos)
 				newParticlePos = self.propagate(particlePos, particleVel, timestep)
 				track.addObservation(newParticlePos, t)
 
