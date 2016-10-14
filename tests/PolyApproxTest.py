@@ -66,7 +66,7 @@ vfEstimator = vf_approx.polynomial.PolynomialLSApproxmiator(polyDegree=2)
 for track in tracks:
 	vfEstimator.addMeasurements(track.getMeasurements(scoring='time'))
 
-approxVF = vfEstimator.approximate(sourceVF.fieldExtents)
+approxVF = vfEstimator.approximate(sourceVF.extents)
 
 # Approximation Plotting
 
