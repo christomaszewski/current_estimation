@@ -28,7 +28,7 @@ class Field(metaclass=ABCMeta):
 
 	@property
 	@abstractmethod
-	def fieldRep(self):
+	def representation(self):
 		"""All subclasses must provide a field representation
 
 		"""

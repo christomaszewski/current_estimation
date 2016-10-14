@@ -53,7 +53,7 @@ class VectorFieldRepresentation(FieldRepresentation):
 			return self._fieldFunc(x, y)
 		else:
 			# not in valid region, return default value
-			return self._defaultVal
+			return self._undefinedVal
 
 	def isDefinedAt(self, point):
 		return self._validExtents.contain(point)
@@ -84,15 +84,15 @@ class CompoundVectorFieldRepresentation(FieldRepresentation):
 		self._undefinedVal = undefinedValue
 		if (undefinedValue is None):
 			# Define combined extents in a piecewise fashion
-			self._validExtents = extents.PiecewiseExtents(field.validExtents)
+			self._validExtents = extents.PiecewiseExtents(field.extents)
 		else:
 			# Define extents which emcompass all component extents
-			self._validExtents = extents.EncompassingExtents(field.validExtents)
+			self._validExtents = extents.EncompassingExtents(field.extents)
 
-		self._componentFields = [field]
+		self._componentFields = [field.representation]
 
 	def __getitem__(self, index):
-		value = undefinedValue
+		value = self._undefinedVal
 
 		if (not self._validExtents.contain(index)):
 			# point not in valid extents, return undefined value
@@ -108,10 +108,23 @@ class CompoundVectorFieldRepresentation(FieldRepresentation):
 
 		return value
 
-	def addField(self, field):
-		self._componentFields.append(field)
-		self._validExtents.addExtents(field.validExtents)
+	def addField(self, fieldRep):
+		# todo: check for mixing piecewise and encompassing exents
+
+		# Check if you are trying to add another compound vector field rep
+		if (isinstance(fieldRep, CompoundVectorFieldRepresentation)):
+			# add components of other compound vf to self
+			self._componentFields.extend(fieldRep.components)
+
+		else:
+			self._componentFields.append(fieldRep)
+
+		self._validExtents.addExtents(fieldRep.validExtents)
 
 	@property
 	def validExtents(self):
 		return self._validExtents
+
+	@property
+	def components(self):
+		return self._componentFields

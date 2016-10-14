@@ -14,8 +14,7 @@ class VectorField(Field):
 	"""
 
 	def __init__(self, fieldRepresentation):
-		""" Object expects a lambda function that takes two variables and valid
-			bounds for field
+		""" Object expects a valid vector field representation
 		"""
 		self._fieldRep = fieldRepresentation
 
@@ -85,11 +84,11 @@ class VectorField(Field):
 
 
 	@property
-	def fieldRep(self):
+	def representation(self):
 		return self._fieldRep
 
 	@property
-	def fieldExtents(self):
+	def extents(self):
 		return self._fieldRep.validExtents
 
 	@property
@@ -152,3 +151,35 @@ class DevelopedPipeFlowField(VectorField):
 			((4 * (x - offset[0]) / channelWidth - 4 * (x - offset[0])**2 / channelWidth**2) * vMax))
 
 		self._fieldRep = representation.VectorFieldRepresentation(vfFunc, fieldExtents)
+
+
+
+class CompoundVectorField(VectorField):
+	"""Vector field object that is composed of multiple component vector fields
+
+	"""
+
+	def __init__(self, *args):
+		"""Builds a compound vector field object from input vector fields
+
+		"""
+
+		if (len(args) < 1):
+			# error: must give at least one field
+			# todo: handle this
+			return
+
+		self._fieldRep = None
+		for field in args:
+			if (self._fieldRep is None):
+				self._fieldRep = representation.CompoundVectorFieldRepresentation(field, (0.0,0.0))
+			else:
+				self._fieldRep.addField(field.representation)
+
+	def __add__(self, other):
+		# todo: appropriately combine vector fields
+		self._fieldRep.addField(other.representation)
+
+	def __radd__(self, other):
+		# todo: appropriately combine vector fields
+		self._fieldRep.addField(other.representation)
