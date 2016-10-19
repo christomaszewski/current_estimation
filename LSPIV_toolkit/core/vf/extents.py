@@ -34,6 +34,28 @@ class FieldExtents(object):
 
 		return False
 
+	def xSplit(self, axis):
+		subExtents = []
+
+		if (self._xMin < axis < self._xMax):
+			subExtents.append(FieldExtents((self._xMin, axis), self.yRange))
+			subExtents.append(FieldExtents((axis, self._xMax), self.yRange))
+		else:
+			subExtents.append(self)
+
+		return subExtents
+
+	def ySplit(self, axis):
+		subExtents = []
+
+		if (self._yMin < axis < self._yMax):
+			subExtents.append(FieldExtents(self.xRange, (self._yMin, axis)))
+			subExtents.append(FieldExtents(self.xRange, (axis, self._yMax)))
+		else:
+			subExtents.append(self)
+
+		return subExtents
+
 	@property
 	def xRange(self):
 		return (self._xMin, self._xMax)

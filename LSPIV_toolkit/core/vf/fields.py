@@ -9,7 +9,9 @@ class VectorField(Field):
 	""" Object representing a vector field
 
 		This is being transitioned to a base class that should not be
-		instantiated!
+		instantiated! - Not true anymore?
+
+		Todo: Need to think about implementing changing extents
 
 	"""
 
@@ -152,6 +154,56 @@ class DevelopedPipeFlowField(VectorField):
 
 		self._fieldRep = representation.VectorFieldRepresentation(vfFunc, fieldExtents)
 
+class DivergingFlowField(VectorField):
+	""" A flow field diverging from a given central axis
+
+	Note:
+		Only supports vertical center axes for now
+
+	"""
+
+	def __init__(self, flowMag, centerAxis, fieldExtents):
+		axisX, axisY = centerAxis
+		
+		extents = fieldExtents.xSplit(axisX)
+
+		if (len(extents) is 2):
+			vfFuncLeft = lambda x,y: (-flowMag, 0)
+			vfFuncRight = lambda x,y: (flowMag, 0)
+
+			vfLeft = representation.VectorFieldRepresentation(vfFuncLeft, extents[0])
+			vfRight = representation.VectorFieldRepresentation(vfFuncRight, extents[1])
+			self._fieldRep = representation.CompoundVectorFieldRepresentation(vfLeft)
+			self._fieldRep.addField(vfRight)
+		else:
+			# Error for now, needs to create appropriate side of field in future
+			print("Error, axis not in extents")
+
+
+class ConvergingFlowField(VectorField):
+	""" A flow field converging to a given central axis
+
+	Note:
+		Only supports vertical center axes for now
+
+	"""
+
+	def __init__(self, flowMag, centerAxis, fieldExtents):
+		axisX, axisY = centerAxis
+		
+		extents = fieldExtents.xSplit(axisX)
+
+		if (len(extents) is 2):
+			vfFuncLeft = lambda x,y: (flowMag, 0)
+			vfFuncRight = lambda x,y: (-flowMag, 0)
+
+			vfLeft = representation.VectorFieldRepresentation(vfFuncLeft, extents[0])
+			vfRight = representation.VectorFieldRepresentation(vfFuncRight, extents[1])
+			self._fieldRep = representation.CompoundVectorFieldRepresentation(vfLeft)
+			self._fieldRep.addField(vfRight)
+		else:
+			# Error for now, needs to create appropriate side of field in future
+			print("Error, axis not in extents")
 
 
 class CompoundVectorField(VectorField):
@@ -172,7 +224,7 @@ class CompoundVectorField(VectorField):
 		self._fieldRep = None
 		for field in args:
 			if (self._fieldRep is None):
-				self._fieldRep = representation.CompoundVectorFieldRepresentation(field, (0.0,0.0))
+				self._fieldRep = representation.CompoundVectorFieldRepresentation(field.representation, (0.0,0.0))
 			else:
 				self._fieldRep.addField(field.representation)
 

@@ -70,7 +70,7 @@ class CompoundVectorFieldRepresentation(FieldRepresentation):
 
 	"""
 
-	def __init__(self, field, undefinedValue=None):
+	def __init__(self, fieldRep=None, undefinedValue=(0.0, 0.0)):
 		"""
 
 		Note:
@@ -84,12 +84,15 @@ class CompoundVectorFieldRepresentation(FieldRepresentation):
 		self._undefinedVal = undefinedValue
 		if (undefinedValue is None):
 			# Define combined extents in a piecewise fashion
-			self._validExtents = extents.PiecewiseExtents(field.extents)
+			self._validExtents = extents.PiecewiseExtents(fieldRep.validExtents)
 		else:
 			# Define extents which emcompass all component extents
-			self._validExtents = extents.EncompassingExtents(field.extents)
+			self._validExtents = extents.EncompassingExtents(fieldRep.validExtents)
 
-		self._componentFields = [field.representation]
+		if (fieldRep is not None):
+			self._componentFields = [fieldRep]
+		else:
+			self._componentFields = []
 
 	def __getitem__(self, index):
 		value = self._undefinedVal

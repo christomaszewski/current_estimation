@@ -6,10 +6,14 @@ from .base import VectorFieldApproximator
 
 class GPApproximator(VectorFieldApproximator):
 
-	def __init__(self):
+	def __init__(self, kernel=None):
 		self._measurements = []
 
-		self._K = GPy.kern.Matern52(input_dim=2, ARD=True, lengthscale=3)
+		if (kernel is None):
+			# Default kernel
+			self._K = GPy.kern.Matern52(input_dim=2, ARD=True, lengthscale=10)
+		else:
+			self._K = kernel
 
 		self._gpModelX = None
 		self._gpModelY = None
@@ -65,7 +69,7 @@ class CoregionalizedGPApproximator(VectorFieldApproximator):
 	def __init__(self):
 		self._measurements = []
 
-		self._K = GPy.kern.RBF(input_dim=2, ARD=True, lengthscale=5)
+		self._K = GPy.kern.Matern32(input_dim=2, ARD=True, lengthscale=1)
 		self._coregionalizedK = GPy.util.multioutput.ICM(input_dim=2, num_outputs=2, kernel=self._K)
 
 		self._gpModel = None
@@ -79,7 +83,7 @@ class CoregionalizedGPApproximator(VectorFieldApproximator):
 	def clearMeasurements(self):
 		super().clearMeasurements()
 
-	def approximate(self):
+	def approximate(self, fieldExtents=None):
 		if (len(self._measurements) < 1):
 			print("No Measurements Available")
 			return None
@@ -109,6 +113,6 @@ class CoregionalizedGPApproximator(VectorFieldApproximator):
 		self._gpModel['.*Mat32.var'].constrain_fixed(1.)
 		self._gpModel.optimize(messages=False)
 
-		# Todo: Add CoregionalizedGP VF represenation and return actual field object here
+		vfRep = vf.gp_representation.CoregionalizedGPFieldRepresentation(self._gpModel, fieldExtents)
 
-		return None
+		return vf.fields.VectorField(vfRep)
