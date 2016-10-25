@@ -11,9 +11,11 @@ class GPApproximator(VectorFieldApproximator):
 
 		if (kernel is None):
 			# Default kernel
-			self._K = GPy.kern.Matern52(input_dim=2, ARD=True, lengthscale=10)
+			self._Kx = GPy.kern.Matern32(2, ARD=True, lengthscale=5)
+			self._Ky = GPy.kern.Matern32(2, ARD=True, lengthscale=5)
 		else:
-			self._K = kernel
+			self._Kx = kernel
+			self._Ky = kernel
 
 		self._gpModelX = None
 		self._gpModelY = None
@@ -51,11 +53,19 @@ class GPApproximator(VectorFieldApproximator):
 		y2 = np.reshape(y2, (len(vY),1))
 
 
-		self._gpModelX = GPy.models.GPRegression(x, y1, self._K, normalizer=False)
-		self._gpModelY = GPy.models.GPRegression(x, y2, self._K, normalizer=False)
+		self._gpModelX = GPy.models.GPRegression(x, y1, self._Kx, normalizer=False)
+		self._gpModelY = GPy.models.GPRegression(x, y2, self._Ky, normalizer=False)
 
-		self._gpModelX.optimize(max_f_eval = 1000)
-		self._gpModelY.optimize(max_f_eval = 1000)
+		print(self._gpModelX)
+		print(self._gpModelY)
+		print("length", self._Kx.lengthscale)
+
+		self._gpModelX.optimize(max_iters = 10000)
+		self._gpModelY.optimize(max_iters = 10000)
+
+		print("length", self._Kx.lengthscale)
+		print(self._gpModelX)
+		print(self._gpModelY)
 
 		#self._gpModel.plot(fixed_inputs=[(1,0)],which_data_rows=slices[0],Y_metadata={'output_index':0})
 
@@ -69,8 +79,20 @@ class CoregionalizedGPApproximator(VectorFieldApproximator):
 	def __init__(self):
 		self._measurements = []
 
-		self._K = GPy.kern.Matern32(input_dim=2, ARD=True, lengthscale=1)
-		self._coregionalizedK = GPy.util.multioutput.ICM(input_dim=2, num_outputs=2, kernel=self._K)
+
+		# Bias Kernel
+		self._biasK = GPy.kern.Bias(input_dim=2)
+		
+		# Linear Kernel
+		self._linearK = GPy.kern.Linear(input_dim=2, ARD=True)
+		
+		# Matern 3/2 Kernel
+		self._maternK = GPy.kern.Matern32(input_dim=2, ARD=True, lengthscale=5)
+		
+		kList = [self._biasK, self._maternK]
+
+		# Build Coregionalized
+		self._coregionalizedK = GPy.util.multioutput.LCM(input_dim=2, num_outputs=2, kernels_list=kList)
 
 		self._gpModel = None
 
@@ -110,9 +132,20 @@ class CoregionalizedGPApproximator(VectorFieldApproximator):
 
 		# Coregionalization stuff
 		self._gpModel = GPy.models.GPCoregionalizedRegression([x, x], [y1, y2], self._coregionalizedK)
-		self._gpModel['.*Mat32.var'].constrain_fixed(1.)
-		self._gpModel.optimize(messages=False)
+		print(self._gpModel)
 
+		# Set constraints
+		self._gpModel['.*ICM.*var'].unconstrain()
+		self._gpModel['.*ICM0.*var'].constrain_fixed(1.)
+		self._gpModel['.*ICM0.*W'].constrain_fixed(0)
+		self._gpModel['.*ICM1.*var'].constrain_fixed(1.)
+		self._gpModel['.*ICM1.*W'].constrain_fixed(0)
+
+		print(self._gpModel)
+
+		self._gpModel.optimize(messages=True, max_iters=10000, optimizer='scg')
+
+		print(self._gpModel)
 		vfRep = vf.gp_representation.CoregionalizedGPFieldRepresentation(self._gpModel, fieldExtents)
 
 		return vf.fields.VectorField(vfRep)
