@@ -1,0 +1,6 @@
+dill>=0.2.5
+GPy>=1.5.5
+matplotlib>=1.5.3
+numpy>=1.11.2
+scipy>=0.18.1
+opencv-python>=3.1.0

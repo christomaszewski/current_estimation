@@ -34,25 +34,43 @@ class FieldExtents(object):
 
 		return False
 
-	def xSplit(self, axis):
+	def xSplit(self, *args):
 		subExtents = []
 
-		if (self._xMin < axis < self._xMax):
-			subExtents.append(FieldExtents((self._xMin, axis), self.yRange))
-			subExtents.append(FieldExtents((axis, self._xMax), self.yRange))
-		else:
-			subExtents.append(self)
+		# Need to add sorting of args in case unsorted axes are provided
+
+		# Initialize bounds of remaining extents to be paritioned
+		xLower = self._xMin
+		xUpper = self._xMax
+
+		for axis in args:
+			# if axis is within remaining extents to be partitioned
+			if (xLower < axis < xUpper):
+				subExtents.append(FieldExtents((xLower, axis), self.yRange))
+				# Move xLower bound up to axis
+				xLower = axis
+
+				
+		subExtents.append(FieldExtents((xLower, xUpper), self.yRange))
 
 		return subExtents
 
-	def ySplit(self, axis):
+	def ySplit(self, *args):
 		subExtents = []
 
-		if (self._yMin < axis < self._yMax):
-			subExtents.append(FieldExtents(self.xRange, (self._yMin, axis)))
-			subExtents.append(FieldExtents(self.xRange, (axis, self._yMax)))
-		else:
-			subExtents.append(self)
+		# Initialize bounds of remaining extents to be paritioned
+		yLower = self._yMin
+		yUpper = self._yMax
+
+		for axis in args:
+			# if axis is within remaining extents to be partitioned
+			if (yLower < axis < yUpper):
+				subExtents.append(FieldExtents(self.xRange, (yLower, axis)))
+				# Move yLower bound up to axis
+				yLower = axis
+
+				
+		subExtents.append(FieldExtents(self.xRange, (yLower, yUpper)))
 
 		return subExtents
 
@@ -148,3 +166,23 @@ class InfiniteExtents(FieldExtents):
 	@property
 	def yRange(self):
 		return None
+
+class NullExtents(FieldExtents):
+	"""Class representing null field extents (i.e. no points valid)
+
+	"""
+
+	def __init__(self):
+		"""No arguments are necessary, extents are null
+		xMin set to greater than xMax 
+		yMin set to greater than yMax
+
+		"""
+		self._xMin = 1.0
+		self._xMax = -1.0
+		self._yMin = 1.0
+		self._yMax = -1.0
+
+	def contain(self, point):
+		# For efficiency, should return False with super class contain method
+		return False

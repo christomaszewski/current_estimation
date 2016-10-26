@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import dill
 
 from context import LSPIV_toolkit
 
@@ -16,38 +17,10 @@ yGrid = 10 #cells
 xDist = 100 #meters
 yDist = 50 #meters
 
-# Domain Extents [0, 100, 0, 50]
-domainExtents = vf_extents.FieldExtents((0.0, xDist), (0.0, yDist))
-
-# Define a uniform flow across the domain
-uniformFlow = field_lib.UniformVectorField(flowVector=(-0.2, 0.5), fieldExtents=domainExtents)
-
-# Simulate bridge pylon with two structured flows on either side of a region of slow flow
-
-# Left channel [0, 30]
-lcWidth = 60.0
-lcVMax = 3.0
-lcExtents = vf_extents.FieldExtents((0.0, lcWidth), (0.0, yDist))
-lcFlow = field_lib.DevelopedPipeFlowField(lcWidth, lcVMax, lcExtents)
-
-# Center chanel [60, 70]
-cExtentsPrePylon = vf_extents.FieldExtents((lcWidth, lcWidth+10), (0.0, yDist/2.0))
-cExtentsPostPylon = vf_extents.FieldExtents((lcWidth, lcWidth+10), (yDist/2.0, yDist))
-prePylonFlow = field_lib.UniformVectorField(flowVector=(0.0, 1.0), fieldExtents=cExtentsPrePylon)
-postPylonFlow = field_lib.UniformVectorField(flowVector=(0.0, 0.5), fieldExtents=cExtentsPostPylon)
-divFlow = field_lib.DivergingFlowField(1.0, (65, 0), cExtentsPrePylon)
-convFlow = field_lib.ConvergingFlowField(1.0, (65, 0), cExtentsPostPylon)
-centerFlow = field_lib.CompoundVectorField(prePylonFlow, postPylonFlow, divFlow, convFlow)
-# Right channel [70, 100]
-rcWidth = 30.0
-rcVMax = 1.5
-rcExtents = vf_extents.FieldExtents((70.0, 100.0), (0.0, yDist))
-rcFlow = field_lib.DevelopedPipeFlowField(rcWidth, rcVMax, rcExtents, offset=(70.0, 0.0))
-
-
-compoundVF = field_lib.CompoundVectorField(uniformFlow, lcFlow, centerFlow, rcFlow)
-
 displayGrid = vf_utils.SampleGrid(xDist, yDist, xGrid, yGrid)
+
+with open('../scenarios/pylon.scenario', mode='rb') as f:
+	compoundVF = dill.load(f)
 
 fieldView = vf_plot.SimpleFieldView(compoundVF, displayGrid, 1.0)
 
@@ -63,7 +36,7 @@ simulator = vf_sim.simulators.ParticleSimulator(compoundVF)
 
 tracks = simulator.simulate(seedParticles, time=7, timestep=0.3)
 
-vfEstimator = vf_approx.gp.GPApproximator()
+vfEstimator = vf_approx.gp.CoregionalizedGPApproximator()
 for track in tracks:
 	vfEstimator.addMeasurements(track.getMeasurements(scoring='time'))
 
@@ -102,5 +75,11 @@ ax2.axis(approxVF.plotExtents)
 fig.colorbar(q2, ax=ax2)
 
 plt.show()
+"""
+plt.figure()
+varx, vary = approxVF.sampleVarGrid(displayGrid)
+print(varx)
+plt.pcolormesh(xgrid, ygrid, vary, cmap=plt.cm.jet)
+plt.show()"""
 
 plt.pause(100)

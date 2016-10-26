@@ -1,6 +1,7 @@
 import numpy as np
+import pickle
 
-from . import representation
+from . import representation as vf_rep
 from . import extents
 from .base import Field
 from ..utils import Measurement
@@ -27,6 +28,9 @@ class VectorField(Field):
 		"""
 		return self._fieldRep[point]
 
+	def sampleVarAtPoint(self, point):
+		return self._fieldRep.getVar(point)
+
 	def sampleAtPoints(self, points):
 		""" Returns the value of the vector field at each
 			of the points in the list provided
@@ -43,6 +47,20 @@ class VectorField(Field):
 		vectorizedField = np.vectorize(wrapper)
 
 		return vectorizedField(gridX, gridY)
+
+
+	def sampleVarAtGrid(self, gridX, gridY):
+
+		wrapper = lambda x,y: self.sampleVarAtPoint((x,y))
+		vectorizedField = np.vectorize(wrapper)
+
+		return vectorizedField(gridX, gridY)
+
+
+	def sampleVarGrid(self, grid):
+
+		xGrid, yGrid = grid.mgrid
+		return self.sampleVarAtGrid(xGrid, yGrid)
 
 	def sampleGrid(self, grid):
 		""" Returns a sampling of vector field at each point in grid
@@ -129,7 +147,7 @@ class UniformVectorField(VectorField):
 
 		vfFunc = lambda x,y: flowVector
 
-		self._fieldRep = representation.VectorFieldRepresentation(vfFunc, fieldExtents)
+		self._fieldRep = vf_rep.VectorFieldRepresentation(vfFunc, fieldExtents)
 
 class DevelopedPipeFlowField(VectorField):
 	""" Standard vector field representing fully developed pipe flow in channel
@@ -152,7 +170,7 @@ class DevelopedPipeFlowField(VectorField):
 		vfFunc = lambda x,y: (0,
 			((4 * (x - offset[0]) / channelWidth - 4 * (x - offset[0])**2 / channelWidth**2) * vMax))
 
-		self._fieldRep = representation.VectorFieldRepresentation(vfFunc, fieldExtents)
+		self._fieldRep = vf_rep.VectorFieldRepresentation(vfFunc, fieldExtents)
 
 class DivergingFlowField(VectorField):
 	""" A flow field diverging from a given central axis
@@ -162,22 +180,34 @@ class DivergingFlowField(VectorField):
 
 	"""
 
-	def __init__(self, flowMag, centerAxis, fieldExtents):
+	def __init__(self, flowMag, centerAxis, fieldExtents, decay='none'):
 		axisX, axisY = centerAxis
 		
-		extents = fieldExtents.xSplit(axisX)
+		vfDecayFuncName = '_' + decay
+		vfDecayFunc = getattr(self, vfDecayFuncName, lambda x,y,ax,extents: 1)
+		vfFunc = lambda x,y: (flowMag * vfDecayFunc(x,y,axisX, fieldExtents), 0)
 
-		if (len(extents) is 2):
-			vfFuncLeft = lambda x,y: (-flowMag, 0)
-			vfFuncRight = lambda x,y: (flowMag, 0)
+		self._fieldRep = vf_rep.VectorFieldRepresentation(vfFunc, fieldExtents)
 
-			vfLeft = representation.VectorFieldRepresentation(vfFuncLeft, extents[0])
-			vfRight = representation.VectorFieldRepresentation(vfFuncRight, extents[1])
-			self._fieldRep = representation.CompoundVectorFieldRepresentation(vfLeft)
-			self._fieldRep.addField(vfRight)
+	def _none(self, x, y, ax, extents):
+		if (x < ax):
+			return -1.0
+		elif (x > ax):
+			return 1.0
 		else:
-			# Error for now, needs to create appropriate side of field in future
-			print("Error, axis not in extents")
+			return 0.0
+
+	def _linear(self, x, y, ax, extents):
+		xMin, xMax = extents.xRange
+		leftPartition = ax - xMin
+		rightPartition = xMax - ax
+		if (x < ax):
+			return (xMin - x) / leftPartition
+		elif (x > ax):
+			return (xMax - x) / rightPartition
+		else:
+			return 0.0
+
 
 
 class ConvergingFlowField(VectorField):
@@ -188,22 +218,34 @@ class ConvergingFlowField(VectorField):
 
 	"""
 
-	def __init__(self, flowMag, centerAxis, fieldExtents):
+	def __init__(self, flowMag, centerAxis, fieldExtents, decay='none'):
 		axisX, axisY = centerAxis
 		
-		extents = fieldExtents.xSplit(axisX)
+		vfDecayFuncName = '_' + decay
+		vfDecayFunc = getattr(self, vfDecayFuncName, lambda x,y,ax,extents: 1)
+		vfFunc = lambda x,y: (flowMag * vfDecayFunc(x,y,axisX, fieldExtents), 0)
 
-		if (len(extents) is 2):
-			vfFuncLeft = lambda x,y: (flowMag, 0)
-			vfFuncRight = lambda x,y: (-flowMag, 0)
+		self._fieldRep = vf_rep.VectorFieldRepresentation(vfFunc, fieldExtents)
 
-			vfLeft = representation.VectorFieldRepresentation(vfFuncLeft, extents[0])
-			vfRight = representation.VectorFieldRepresentation(vfFuncRight, extents[1])
-			self._fieldRep = representation.CompoundVectorFieldRepresentation(vfLeft)
-			self._fieldRep.addField(vfRight)
+
+	def _none(self, x, y, ax, extents):
+		if (x < ax):
+			return 1.0
+		elif (x > ax):
+			return -1.0
 		else:
-			# Error for now, needs to create appropriate side of field in future
-			print("Error, axis not in extents")
+			return 0.0
+
+	def _linear(self, x, y, ax, extents):
+		xMin, xMax = extents.xRange
+		leftPartition = ax - xMin
+		rightPartition = xMax - ax
+		if (x < ax):
+			return (x - xMin) / leftPartition
+		elif (x > ax):
+			return (x - xMax) / rightPartition
+		else:
+			return 0.0
 
 
 class CompoundVectorField(VectorField):
@@ -224,7 +266,7 @@ class CompoundVectorField(VectorField):
 		self._fieldRep = None
 		for field in args:
 			if (self._fieldRep is None):
-				self._fieldRep = representation.CompoundVectorFieldRepresentation(field.representation, (0.0,0.0))
+				self._fieldRep = vf_rep.CompoundVectorFieldRepresentation(field.representation, (0.0,0.0))
 			else:
 				self._fieldRep.addField(field.representation)
 

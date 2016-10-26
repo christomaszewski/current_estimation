@@ -13,12 +13,21 @@ class GPVectorFieldRepresentation(FieldRepresentation):
 		self._undefinedVal = undefinedValue
 
 	def __getitem__(self, index):
+		# Todo: add Memoization
 		testPoint = np.asarray([index])
 
 		muX, varX = self._xComponentGPModel.predict_noiseless(testPoint)
 		muY, varY = self._yComponentGPModel.predict_noiseless(testPoint)
 
 		return (muX[0][0], muY[0][0])
+
+	def getVar(self, index):
+		testPoint = np.asarray([index])
+
+		muX, varX = self._xComponentGPModel.predict_noiseless(testPoint)
+		muY, varY = self._yComponentGPModel.predict_noiseless(testPoint)
+
+		return (varX[0][0], varY[0][0])
 
 	def isDefinedAt(self, point):
 		return self._validExtents.contain(point)

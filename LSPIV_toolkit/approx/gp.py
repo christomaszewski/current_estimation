@@ -11,8 +11,8 @@ class GPApproximator(VectorFieldApproximator):
 
 		if (kernel is None):
 			# Default kernel
-			self._Kx = GPy.kern.Matern32(2, ARD=True, lengthscale=5)
-			self._Ky = GPy.kern.Matern32(2, ARD=True, lengthscale=5)
+			self._Kx = GPy.kern.Matern32(2, ARD=True, lengthscale=3)
+			self._Ky = GPy.kern.Matern32(2, ARD=True, lengthscale=3)
 		else:
 			self._Kx = kernel
 			self._Ky = kernel
@@ -58,12 +58,10 @@ class GPApproximator(VectorFieldApproximator):
 
 		print(self._gpModelX)
 		print(self._gpModelY)
-		print("length", self._Kx.lengthscale)
 
 		self._gpModelX.optimize(max_iters = 10000)
 		self._gpModelY.optimize(max_iters = 10000)
 
-		print("length", self._Kx.lengthscale)
 		print(self._gpModelX)
 		print(self._gpModelY)
 
@@ -126,10 +124,6 @@ class CoregionalizedGPApproximator(VectorFieldApproximator):
 		y1 = np.reshape(y1, (len(vX),1))
 		y2 = np.reshape(y2, (len(vY),1))
 
-	
-		print(y1)
-		print(y2)
-
 		# Coregionalization stuff
 		self._gpModel = GPy.models.GPCoregionalizedRegression([x, x], [y1, y2], self._coregionalizedK)
 		print(self._gpModel)
@@ -140,10 +134,12 @@ class CoregionalizedGPApproximator(VectorFieldApproximator):
 		self._gpModel['.*ICM0.*W'].constrain_fixed(0)
 		self._gpModel['.*ICM1.*var'].constrain_fixed(1.)
 		self._gpModel['.*ICM1.*W'].constrain_fixed(0)
+		#self._gpModel['.*ICM2.*var'].constrain_fixed(1.)
+
 
 		print(self._gpModel)
 
-		self._gpModel.optimize(messages=True, max_iters=10000, optimizer='scg')
+		self._gpModel.optimize(messages=False, max_iters=10000, optimizer='lbfgsb')
 
 		print(self._gpModel)
 		vfRep = vf.gp_representation.CoregionalizedGPFieldRepresentation(self._gpModel, fieldExtents)

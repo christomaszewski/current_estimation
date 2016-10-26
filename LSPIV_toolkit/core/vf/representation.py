@@ -39,7 +39,7 @@ class VectorFieldRepresentation(FieldRepresentation):
 		Args:
 			function (func): function mapping points in the field to vector values
 			extents (FieldExtents): extents over which function is valid/applies
-			defaultValue (2-Tuple): value to return when sampling outside of extents
+			undefinedValue (2-Tuple): value to return when sampling outside of extents
 
 		"""
 		self._fieldFunc = function
@@ -82,17 +82,21 @@ class CompoundVectorFieldRepresentation(FieldRepresentation):
 		
 		"""
 		self._undefinedVal = undefinedValue
-		if (undefinedValue is None):
-			# Define combined extents in a piecewise fashion
-			self._validExtents = extents.PiecewiseExtents(fieldRep.validExtents)
-		else:
-			# Define extents which emcompass all component extents
-			self._validExtents = extents.EncompassingExtents(fieldRep.validExtents)
+		validExtents = extents.NullExtents()
 
 		if (fieldRep is not None):
 			self._componentFields = [fieldRep]
+			validExtents = fieldRep.validExtents
 		else:
 			self._componentFields = []
+
+
+		if (undefinedValue is None):
+			# Define combined extents in a piecewise fashion
+			self._validExtents = extents.PiecewiseExtents(validExtents)
+		else:
+			# Define extents which emcompass all component extents
+			self._validExtents = extents.EncompassingExtents(validExtents)
 
 	def __getitem__(self, index):
 		value = self._undefinedVal
