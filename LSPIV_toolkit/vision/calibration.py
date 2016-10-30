@@ -3,66 +3,86 @@ import pickle
 import glob
 import numpy as np
 
-import vf_utils.core as vf_core
-
 class FisheyeCameraModel(object):
 	""" Class for loading calibration settings and rectifying images accordingly
 
-		todo: add warping of individual points
 	"""
 
 	def __init__(self, camIntrinsics=None, distortionCoeff=None):
-		self.__K = camIntrinsics
-		self.__D = distortionCoeff
+		self._K = camIntrinsics
+		self._D = distortionCoeff
 
-		self.__newK = camIntrinsics
+		self._newK = camIntrinsics
+
+		self._cropBounds = [0,0,0,0]
 
 	def loadModel(self, fileName):
 		with open(fileName, 'rb') as f:
-			(self.__K, self.__D) = pickle.load(f)
+			(self._K, self._D) = pickle.load(f)
 
 	def saveModel(self, fileName):
 		with open(fileName, 'wb') as f:
-			pickle.dump((self.__K, self.__D), f)
+			pickle.dump((self._K, self._D), f)
 
 	def undistortPoints(self, points):
-		undistorted = cv2.fisheye.undistortPoints(points, self.__K, self.__D, p=self.__newK)
+		assert points.ndim == 2 and points.shape[1] == 2
 
-	def undistortImage(self, img, crop=False):
+		if points.ndim == 2:
+			points = np.expand_dims(points, 0)
+
+		undistorted = cv2.fisheye.undistortPoints(points.astype(np.float32), self._K, self._D, R=np.eye(3), P=self._newK)
+
+		return np.squeeze(undistorted)
+
+	def undistortImage(self, img, cropping='extents'):
+		cropFuncName = "_" + cropping
+		cropFunc = getattr(self, cropFuncName, lambda img, size: img)
+
 		undistortedSize = img.shape[:2]
-		newK = self.__K
+		
+		newK = self._K
 
-		newK = cv2.fisheye.estimateNewCameraMatrixForUndistortRectify(self.__K,
-			self.__D, undistortedSize, np.eye(3), balance=1.0, new_size=undistortedSize,
-			fov_scale=1.25)
+		newK = cv2.fisheye.estimateNewCameraMatrixForUndistortRectify(self._K,
+			self._D, undistortedSize, np.eye(3), balance=1.0, new_size=undistortedSize,
+			fov_scale=1.75)
 
 		# Reset to center of image for now
 		newK[0,2] = undistortedSize[0] / 2
 		newK[1,2] = undistortedSize[1] / 2
 
-		self.__newK = newK
+		self._newK = newK
 
-		map1, map2 = cv2.fisheye.initUndistortRectifyMap(self.__K, self.__D, np.eye(3),
+		map1, map2 = cv2.fisheye.initUndistortRectifyMap(self._K, self._D, np.eye(3),
 			newK, undistortedSize, cv2.CV_16SC2)
 
 		undistorted = cv2.remap(img, map1, map2,
 			interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
 
-		if (crop):
-			h, w = undistortedSize
-			wMid = w / 2
-			hMid = h / 2
-			print(wMid)
-			cropped = undistorted[wMid-550:wMid+550,:]
-			undistorted = cropped
-
-		return undistorted
+		return cropFunc(undistorted, undistortedSize)
 
 	def undistortTrack(self, track):
 		undistortedTrack = track
 		return undistortedTrack
 
+	def cropPoints(self, points):
+		""" Todo: Restructure this class to deal with different crop settings
 
+			this function is currently not implemented
+		"""
+		return points
+
+	def _extents(self, img, origSize):
+		corners = np.asarray([[0,0], [0, origSize[0]], [origSize[1], 0], origSize[::-1]])
+
+		pts = self.undistortPoints(corners)
+
+		x, y = pts[0]
+		r, b = pts[3]
+		self._cropBounds = [x, y, r, b]
+
+		cropped = img[int(y):int(b), int(x):int(r)]
+
+		return cropped
 
 class FisheyeCalibration(object):
 	""" Class to produce a FisheyeCameraModel from a set of calibration images

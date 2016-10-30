@@ -14,15 +14,15 @@ class Track(object):
 	"""
 
 	def __init__(self, particlePos=None, time=None):
-		self.__particlePositions = []
-		self.__startTime = None
+		self._particlePositions = []
+		self._startTime = None
 
 		if (particlePos is not None):
-			self.__particlePositions.append((0,particlePos))
+			self._particlePositions.append((0,particlePos))
 			if (time is None):
-				self.__startTime = time.time()
+				self._startTime = time.time()
 			else:
-				self.__startTime = time
+				self._startTime = time
 
 	def __getitem__(self, index):
 		""" Overrides [] operator to return the observation at index
@@ -30,39 +30,39 @@ class Track(object):
 			time of observation is compensated with start time to get
 			absolute observation
 		"""
-		if (index >= len(self.__particlePositions)):
+		if (index >= len(self._particlePositions)):
 			# Index out of bounds
 			return None
-		(time, position) = self.__particlePositions[index]
-		return (self.__startTime + time, position)
+		(time, position) = self._particlePositions[index]
+		return (self._startTime + time, position)
 
 	def addObservation(self, particlePos, time=None):
 		if (time is None):
 			time = time.time()
 
-		if (self.__startTime is None):
-			self.__startTime = time
+		if (self._startTime is None):
+			self._startTime = time
 
-		offsetTime = time - self.__startTime
-		self.__particlePositions.append((offsetTime, particlePos))
+		offsetTime = time - self._startTime
+		self._particlePositions.append((offsetTime, particlePos))
 
 	def getLastObservation(self):
 		""" Currently just returns the position of the last observation
 
 			Needs to be updated to return an observation with time as well
 		"""
-		if (len(self.__particlePositions) < 1):
+		if (len(self._particlePositions) < 1):
 			return (None, None)
 
-		(time, position) = self.__particlePositions[-1]
+		(time, position) = self._particlePositions[-1]
 		return position
 
 	def size(self):
-		return len(self.__particlePositions)
+		return len(self._particlePositions)
 
 	def getPointSequence(self):
 		# Todo: change return format for easy plotting
-		return [obs[-1] for obs in self.__particlePositions]
+		return [obs[-1] for obs in self._particlePositions]
 
 	def getMeasurements(self, method='midpoint', scoring='time'):
 		""" Returns list of measurements representing velocity of particle
@@ -88,7 +88,7 @@ class Track(object):
 		prevPoint = None
 		prevTime = None
 
-		for (timestamp, point) in self.__particlePositions:
+		for (timestamp, point) in self._particlePositions:
 			if prevPoint is not None:
 				deltaT = timestamp - prevTime
 				#print(point, prevPoint)
@@ -121,7 +121,7 @@ class Track(object):
 	# Scoring Functinns
 	def _time(self):
 		# Length of track in time
-		return self.__particlePositions[-1][0]
+		return self._particlePositions[-1][0]
 
 	def _length(self):
 		# Length of track in number of measurements

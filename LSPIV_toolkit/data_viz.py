@@ -4,6 +4,9 @@ from matplotlib.pyplot import cm
 import numpy as np
 
 class VectorFieldView(object):
+	""" Deprecated, used core.plotting module
+
+	"""
 	def __init__(self, grid):
 		self.__fig = plt.figure()
 		self.__grid = grid

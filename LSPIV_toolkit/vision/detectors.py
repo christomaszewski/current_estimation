@@ -14,42 +14,48 @@ class GridFeatureDetector(object):
 		# only supports cv2.goodFeaturesToTrack right now
 		# partitionMethod subimage is fastest method
 		# todo: add support for ORB
-		self.__featureDetector = detector
+		self._featureDetector = detector
 
 		partitionFuncName = '_' + partitionMethod
-		self.__partitionFunc = getattr(self, partitionFuncName, self._nopartition)
+		self._partitionFunc = getattr(self, partitionFuncName, self._nopartition)
 
 		self.setGrid(gridDim)
 
 	def setGrid(self, gridDim):
-		self.__gridDimensions = gridDim
-		self.__numCells = gridDim[0] * gridDim[1]
+		self._gridDimensions = gridDim
+		self._numCells = gridDim[0] * gridDim[1]
 
 	def detect(self, img, mask, params, numFeatures=None):
 		if ('maxCorners' in params):
 			# goodFeaturesToTrack parameter
-			self.__numTotalFeatures = params['maxCorners']
+			self._numTotalFeatures = params['maxCorners']
 		elif (numFeatures is not None):
-			self.__numTotalFeatures = numFeatures
+			self._numTotalFeatures = numFeatures
 		else:
 			# Default number of features
-			self.__numTotalFeatures = 1000
+			self._numTotalFeatures = 1000
 
-		self.__numFeaturesPerCell = int(self.__numTotalFeatures / self.__numCells)
+		self._numFeaturesPerCell = int(self._numTotalFeatures / self._numCells)
 
-		heightStep = int(img.shape[0] / self.__gridDimensions[0])
-		widthStep = int(img.shape[1] / self.__gridDimensions[1])
+		heightStep = int(img.shape[0] / self._gridDimensions[0])
+		widthStep = int(img.shape[1] / self._gridDimensions[1])
 
 		paramCopy = params.copy()
 
-		features = self.__partitionFunc(img, mask, paramCopy, heightStep, widthStep)
+		features = self._partitionFunc(img, mask, paramCopy, heightStep, widthStep)
 
 		return features
 
 	# Partition Functions
 	def _mask(self, img, mask, params, heightStep, widthStep):
+		""" Runs Feature detection on subsets of image using mask. 
+
+			Note: 
+				This method is substantially slower than the subimage method
+		"""
+
 		# Set desired number of features to features per cell
-		params['maxCorners'] = self.__numFeaturesPerCell
+		params['maxCorners'] = self._numFeaturesPerCell
 
 		# Declare features array
 		features = None
@@ -61,7 +67,7 @@ class GridFeatureDetector(object):
 			for j in np.arange(0, img.shape[1], widthStep):
 				searchMask[i:(i+heightStep), j:(j+widthStep)] = mask[i:(i+heightStep), j:(j+widthStep)]
 
-				newFeatures = self.__featureDetector(img, mask=searchMask, **params)
+				newFeatures = self._featureDetector(img, mask=searchMask, **params)
 
 				# Reset search mask 
 				searchMask[i:(i+heightStep), j:(j+widthStep)] = 0
@@ -76,7 +82,7 @@ class GridFeatureDetector(object):
 	
 	def _subimage(self, img, mask, params, heightStep, widthStep):
 		# Set desired number of features to features per cell
-		params['maxCorners'] = self.__numFeaturesPerCell
+		params['maxCorners'] = self._numFeaturesPerCell
 
 		# Declare features array
 		features = None
@@ -86,7 +92,7 @@ class GridFeatureDetector(object):
 				searchMask = mask[i:(i+heightStep), j:(j+widthStep)]
 				subImg = img[i:(i+heightStep), j:(j+widthStep)]
 
-				newFeatures = self.__featureDetector(subImg, mask=searchMask, **params)
+				newFeatures = self._featureDetector(subImg, mask=searchMask, **params)
 
 				if (newFeatures is not None):
 					newFeatures += np.array([j, i])
@@ -99,9 +105,9 @@ class GridFeatureDetector(object):
 		return features
 
 	def _nopartition(self, img, mask, params, heightStep, widthStep):
-		params['maxCorners'] = self.__numTotalFeatures
+		params['maxCorners'] = self._numTotalFeatures
 
-		features = self.__featureDetector(img, mask=mask, **params)
+		features = self._featureDetector(img, mask=mask, **params)
 
 		return features
 
@@ -115,22 +121,22 @@ class BoatDetector(object):
 	"""
 
 	def __init__(self):
-		self.lowerBlue = np.array([100,50,50], np.uint8)
-		self.upperBlue = np.array([130,255,255], np.uint8)
-		self.lowerRed = np.array([160,50,50], np.uint8)
-		self.upperRed = np.array([190,255,255], np.uint8)
-		self.lowerRed2 = np.array([0,50,50], np.uint8)
-		self.upperRed2 = np.array([10,255,255], np.uint8)
-		self.midpoint  = (0,0)
+		self._lowerBlue = np.array([100,50,50], np.uint8)
+		self._upperBlue = np.array([130,255,255], np.uint8)
+		self._lowerRed = np.array([160,50,50], np.uint8)
+		self._upperRed = np.array([190,255,255], np.uint8)
+		self._lowerRed2 = np.array([0,50,50], np.uint8)
+		self._upperRed2 = np.array([10,255,255], np.uint8)
+		self._midpoint  = (0,0)
 
 	def detect(self, img):
 		# Convert image to HSV space
 		hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
 		# Find image regions which fall into blue and red ranges
-		blueMask = cv2.inRange(hsv, self.lowerBlue, self.upperBlue)
-		redMask = cv2.inRange(hsv, self.lowerRed, self.upperRed)
-		redMask2 = cv2.inRange(hsv, self.lowerRed2, self.upperRed2)
+		blueMask = cv2.inRange(hsv, self._lowerBlue, self._upperBlue)
+		redMask = cv2.inRange(hsv, self._lowerRed, self._upperRed)
+		redMask2 = cv2.inRange(hsv, self._lowerRed2, self._upperRed2)
 		redMask = cv2.addWeighted(redMask, 1.0, redMask2, 1.0, 0.0)
 
 		# Erode and dilate mask to remove spurious detections
@@ -187,9 +193,9 @@ class BoatDetector(object):
 			rise = redCentroid[0]-blueCentroid[0]
 			run = redCentroid[1]-blueCentroid[1]
 
-			self.midpoint = (int(blueCentroid[0]+rise*0.5), int(blueCentroid[1]+run*0.5))
-			cv2.circle(img, self.midpoint, 5, (0,0,0), thickness=-1)
-			print(self.midpoint)
+			self._midpoint = (int(blueCentroid[0]+rise*0.5), int(blueCentroid[1]+run*0.5))
+			cv2.circle(img, self._midpoint, 5, (0,0,0), thickness=-1)
+			print(self._midpoint)
 			return True
 
 		return False
