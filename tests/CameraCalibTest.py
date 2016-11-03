@@ -13,7 +13,7 @@ img = cv2.imread("C:\\Users\\ckt\\Documents\\datasets\\calibration\\GoPro Hero 3
 cv2.namedWindow("Original", cv2.WINDOW_NORMAL)
 cv2.namedWindow("Undistorted", cv2.WINDOW_NORMAL)
 
-undistorted = camModel.undistortImage(img, 'extents')
+undistorted = camModel.undistortImage(img)
 
 cv2.imshow("Original", img)
 cv2.imshow("Undistorted", undistorted)

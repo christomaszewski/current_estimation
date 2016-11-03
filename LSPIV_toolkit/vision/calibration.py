@@ -8,13 +8,15 @@ class FisheyeCameraModel(object):
 
 	"""
 
-	def __init__(self, camIntrinsics=None, distortionCoeff=None):
+	def __init__(self, camIntrinsics=None, distortionCoeff=None, imgSize=None):
 		self._K = camIntrinsics
 		self._D = distortionCoeff
 
 		self._newK = camIntrinsics
 
 		self._cropBounds = [0,0,0,0]
+
+		self._imgSize = imgSize
 
 	def loadModel(self, fileName):
 		with open(fileName, 'rb') as f:
@@ -24,7 +26,23 @@ class FisheyeCameraModel(object):
 		with open(fileName, 'wb') as f:
 			pickle.dump((self._K, self._D), f)
 
+	def initialize(self, imgSize):
+		# Todo: store this as part of the model
+		self._imgSize = imgSize
+
+		# Compute new K
+		newK = cv2.fisheye.estimateNewCameraMatrixForUndistortRectify(self._K,
+			self._D, self._imgSize, np.eye(3), balance=1.0, new_size=self._imgSize,
+			fov_scale=1.75)
+
+		# Reset to center of image for now
+		newK[0,2] = self._imgSize[0] / 2
+		newK[1,2] = self._imgSize[1] / 2
+
+		self._newK = newK
+
 	def undistortPoints(self, points):
+		points = np.asarray(points)
 		assert points.ndim == 2 and points.shape[1] == 2
 
 		if points.ndim == 2:
@@ -34,55 +52,15 @@ class FisheyeCameraModel(object):
 
 		return np.squeeze(undistorted)
 
-	def undistortImage(self, img, cropping='extents'):
-		cropFuncName = "_" + cropping
-		cropFunc = getattr(self, cropFuncName, lambda img, size: img)
-
-		undistortedSize = img.shape[:2]
-		
-		newK = self._K
-
-		newK = cv2.fisheye.estimateNewCameraMatrixForUndistortRectify(self._K,
-			self._D, undistortedSize, np.eye(3), balance=1.0, new_size=undistortedSize,
-			fov_scale=1.75)
-
-		# Reset to center of image for now
-		newK[0,2] = undistortedSize[0] / 2
-		newK[1,2] = undistortedSize[1] / 2
-
-		self._newK = newK
-
+	def undistortImage(self, img):
 		map1, map2 = cv2.fisheye.initUndistortRectifyMap(self._K, self._D, np.eye(3),
-			newK, undistortedSize, cv2.CV_16SC2)
+			self._newK, self._imgSize, cv2.CV_16SC2)
 
 		undistorted = cv2.remap(img, map1, map2,
 			interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
 
-		return cropFunc(undistorted, undistortedSize)
+		return undistorted
 
-	def undistortTrack(self, track):
-		undistortedTrack = track
-		return undistortedTrack
-
-	def cropPoints(self, points):
-		""" Todo: Restructure this class to deal with different crop settings
-
-			this function is currently not implemented
-		"""
-		return points
-
-	def _extents(self, img, origSize):
-		corners = np.asarray([[0,0], [0, origSize[0]], [origSize[1], 0], origSize[::-1]])
-
-		pts = self.undistortPoints(corners)
-
-		x, y = pts[0]
-		r, b = pts[3]
-		self._cropBounds = [x, y, r, b]
-
-		cropped = img[int(y):int(b), int(x):int(r)]
-
-		return cropped
 
 class FisheyeCalibration(object):
 	""" Class to produce a FisheyeCameraModel from a set of calibration images

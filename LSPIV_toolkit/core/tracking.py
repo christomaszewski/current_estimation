@@ -1,68 +1,68 @@
+import numpy as np
+
 from .utils import Measurement
 
 class Track(object):
 	""" Represents a single particle/point on an object tracked over some 
 		period of time. Can be used to produce vector field measurements
 
-		particlePositions holds particle locations in 2-Space with the time 
-		the particle was seen at the location offset from the start time of the
-		track. For a point (x,y) observed at time t, the following is stored
+		self._positions holds particle locations in 2-Space
+		self._times holds the times the particle was seen at the location
 
-		(t-self.__startTime, (x,y))
-
-		startTime corresponds to time of first obervation is enforced
 	"""
 
-	def __init__(self, particlePos=None, time=None):
-		self._particlePositions = []
-		self._startTime = None
+	def __init__(self, position=None, time=None):
+		self._positions = []
+		self._times = []
 
-		if (particlePos is not None):
-			self._particlePositions.append((0,particlePos))
+		if (position is not None):
+			self._positions.append(position)
 			if (time is None):
-				self._startTime = time.time()
+				self._times.append(time.time())
 			else:
-				self._startTime = time
+				self._times.append(time)
 
 	def __getitem__(self, index):
 		""" Overrides [] operator to return the observation at index
 
-			time of observation is compensated with start time to get
-			absolute observation
+			Returns observation:
+			(time, position) where position is (x,y) tuple
+
 		"""
-		if (index >= len(self._particlePositions)):
+		if (index >= len(self._positions)):
 			# Index out of bounds
 			return None
-		(time, position) = self._particlePositions[index]
-		return (self._startTime + time, position)
 
-	def addObservation(self, particlePos, time=None):
+		return (self._times[index], self._positions[index])
+
+	def addObservation(self, position, time=None):
 		if (time is None):
 			time = time.time()
 
-		if (self._startTime is None):
-			self._startTime = time
-
-		offsetTime = time - self._startTime
-		self._particlePositions.append((offsetTime, particlePos))
+		self._positions.append(position)
+		self._times.append(time)
 
 	def getLastObservation(self):
 		""" Currently just returns the position of the last observation
 
-			Needs to be updated to return an observation with time as well
 		"""
-		if (len(self._particlePositions) < 1):
+		if (len(self._positions) < 1):
 			return (None, None)
 
-		(time, position) = self._particlePositions[-1]
-		return position
+		return (self._times[-1], self._positions[-1])
 
 	def size(self):
-		return len(self._particlePositions)
+		return len(self._positions)
 
 	def getPointSequence(self):
 		# Todo: change return format for easy plotting
-		return [obs[-1] for obs in self._particlePositions]
+		return self._positions
+
+	def updatePointSequence(self, points):
+		""" For used in applying bulk transforms to all points in track
+
+		"""
+		self._positions = points
 
 	def getMeasurements(self, method='midpoint', scoring='time'):
 		""" Returns list of measurements representing velocity of particle
@@ -75,6 +75,9 @@ class Track(object):
 			end: localize measurement on second point of consecutive point pairs
 
 			Should return empty list of measurements if 0 or 1 observations
+
+			Todo: Don't recalculate measurements if track has not changed since last
+			function call
 		"""
 		methodFuncName = "_" + method
 		methodFunc = getattr(self, methodFuncName, lambda p1, p2: p1)
@@ -88,10 +91,11 @@ class Track(object):
 		prevPoint = None
 		prevTime = None
 
-		for (timestamp, point) in self._particlePositions:
+		for timestamp, point in zip(self._times, self._positions):
 			if prevPoint is not None:
 				deltaT = timestamp - prevTime
 				#print(point, prevPoint)
+
 				xVel = (point[0] - prevPoint[0]) / deltaT
 				yVel = (point[1] - prevPoint[1]) / deltaT
 				vel = (xVel, yVel)
@@ -121,7 +125,7 @@ class Track(object):
 	# Scoring Functinns
 	def _time(self):
 		# Length of track in time
-		return self._particlePositions[-1][0]
+		return self._times[-1] - self._times[0]
 
 	def _length(self):
 		# Length of track in number of measurements

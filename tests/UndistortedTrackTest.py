@@ -5,6 +5,7 @@ import numpy as np
 from context import LSPIV_toolkit
 
 import LSPIV_toolkit.vision.calibration as cv_calib
+import LSPIV_toolkit.vision.utils as cv_utils
 import LSPIV_toolkit.vision.trackers as cv_trackers
 
 datasetDir = "C:\\Users\\ckt\\Documents\\datasets\\river\\short"
@@ -31,9 +32,15 @@ lkTracker = cv_trackers.LKOpticalFlowTracker(lk_params, feature_params)
 
 timestamp = 0.0
 
+
+frameTrans = None
 for fileName in images:
 	img = cv2.imread(fileName)
-	undistortedImg = camModel.undistortImage(img, 'extents')
+	camModel.initialize(img.shape[:2])
+	if (frameTrans is None):
+		frameTrans = cv_utils.FrameTransformation(img.shape[:2], camModel)
+
+	undistortedImg = frameTrans.transformImg(img)
 
 	lkTracker.processImage(img, timestamp)
 	timestamp += datasetTimestep
@@ -41,17 +48,11 @@ for fileName in images:
 	tracks = lkTracker.getTracks()
 
 	for tr in tracks:
+		track = frameTrans.transformTrackForPlotting(tr)
 		ptSeq = tr.getPointSequence()
 		cv2.polylines(img, [np.int32(ptSeq)], False, (255,0,0))
-		undistortedPtSeq = camModel.undistortPoints(np.asarray(ptSeq))
 
-		undistortedPtSeq = np.reshape(undistortedPtSeq, (-1,2))
-
-		# Hack to make tracks display properly in cropped image - fix this!
-		xOffset, yOffset, _, _ = camModel._cropBounds
-		undistortedPtSeq[:, 0] -= xOffset
-		undistortedPtSeq[:, 1] -= yOffset
-		
+		undistortedPtSeq = track.getPointSequence()
 		cv2.polylines(undistortedImg, [np.int32(undistortedPtSeq)], False, (0,0,255))
 
 	

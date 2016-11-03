@@ -28,7 +28,7 @@ class MeasurementProcessor(object):
 		self._yCellWidth = yDistance / yCellCount			#meters
 		self._yCellHalfWidth = self._yCellWidth / 2.0		#meters
 
-		self._maxMeasurementsPerCell = 10
+		self._maxMeasurementsPerCell = 5
 
 		self._measurementBins = defaultdict(list)
 
@@ -63,11 +63,14 @@ class MeasurementProcessor(object):
 		# Or since measurements come in agregated by track they are from use this 
 		# for faster lookups
 
+		#print("Filtering ", len(measurements), " measurements")
+
 		for m in measurements:
 			self.addMeasurement(m)
 
 	def addMeasurement(self, measurement):
 		coordinates = self.binMeasurement(measurement)
+		#print("Adding measurment to cell ", coordinates)
 
 		self._measurementBins[coordinates].append(measurement)
 		measurementBin = self._measurementBins[coordinates]
@@ -120,6 +123,12 @@ class MeasurementProcessor(object):
 		grid = np.zeros((self._yCellCount, self._xCellCount), dtype=np.float64)
 
 		for (x,y) in self._measurementBins:
+			if (0 > x or x >= self._xCellCount):
+				print("x index of measurement out of bounds: ", (x,y))
+				continue
+			if (0 > y or y >= self._yCellCount):
+				print("y index of measurement out of bounds: ", (x,y))
+				continue
 			if (self._measurementBins[(x,y)] is not None):
 				# use number of measurements in cell
 				#grid[y, x] = len(self._measurementBins[(x,y)])

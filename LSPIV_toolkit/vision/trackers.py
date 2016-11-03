@@ -96,7 +96,7 @@ class LKOpticalFlowTracker(Tracker):
 		endpoints = []
 
 		for track in self._activeTracks:
-			position = track.getLastObservation()
+			(time, position) = track.getLastObservation()
 			endpoints.append(position)
 
 		return endpoints
