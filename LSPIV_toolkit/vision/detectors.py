@@ -10,14 +10,17 @@ class GridFeatureDetector(object):
 
 	"""
 
-	def __init__(self, detector, gridDim=(2,2), partitionMethod='subimage'):
+	def __init__(self, detector, gridDim=(2,2), partitionMethod='subimage', borderBuffer=0):
 		# only supports cv2.goodFeaturesToTrack right now
 		# partitionMethod subimage is fastest method
+		# buffer describes region around image border to ignore
 		# todo: add support for ORB
 		self._featureDetector = detector
 
 		partitionFuncName = '_' + partitionMethod
 		self._partitionFunc = getattr(self, partitionFuncName, self._nopartition)
+
+		self._buffer = borderBuffer
 
 		self.setGrid(gridDim)
 
@@ -37,8 +40,8 @@ class GridFeatureDetector(object):
 
 		self._numFeaturesPerCell = int(self._numTotalFeatures / self._numCells)
 
-		heightStep = int(img.shape[0] / self._gridDimensions[0])
-		widthStep = int(img.shape[1] / self._gridDimensions[1])
+		heightStep = int((img.shape[0] - 2 * self._buffer) / self._gridDimensions[0])
+		widthStep = int((img.shape[1] - 2 * self._buffer) / self._gridDimensions[1])
 
 		paramCopy = params.copy()
 
@@ -63,8 +66,8 @@ class GridFeatureDetector(object):
 		# Define full mask
 		searchMask = np.zeros_like(mask)
 
-		for i in np.arange(0, img.shape[0], heightStep):
-			for j in np.arange(0, img.shape[1], widthStep):
+		for i in np.arange(self._buffer, img.shape[0]-heightStep-self._buffer+1, heightStep):
+			for j in np.arange(self._buffer, img.shape[1]-widthStep-self._buffer+1, widthStep):
 				searchMask[i:(i+heightStep), j:(j+widthStep)] = mask[i:(i+heightStep), j:(j+widthStep)]
 
 				newFeatures = self._featureDetector(img, mask=searchMask, **params)
@@ -86,9 +89,10 @@ class GridFeatureDetector(object):
 
 		# Declare features array
 		features = None
-
-		for i in np.arange(0, img.shape[0], heightStep):
-			for j in np.arange(0, img.shape[1], widthStep):
+		
+		for i in np.arange(self._buffer, img.shape[0]-heightStep-self._buffer+1, heightStep):
+			for j in np.arange(self._buffer, img.shape[1]-widthStep-self._buffer+1, widthStep):
+				#print(i, i+heightStep, j, j+widthStep)
 				searchMask = mask[i:(i+heightStep), j:(j+widthStep)]
 				subImg = img[i:(i+heightStep), j:(j+widthStep)]
 

@@ -39,7 +39,7 @@ class LKOpticalFlowTracker(Tracker):
 
 		newTracks = []
 
-		gridDetector = detectors.GridFeatureDetector(cv2.goodFeaturesToTrack, (5,5))
+		gridDetector = detectors.GridFeatureDetector(cv2.goodFeaturesToTrack, (5,5), borderBuffer=35)
 
 		# If features have never been detected or detectionInverval has lapsed
 		if (self._prevDetectionTime is None or timestamp - self._prevDetectionTime > self._detectionInterval):
