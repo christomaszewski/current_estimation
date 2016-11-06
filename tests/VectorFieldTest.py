@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import dill
 
 from context import LSPIV_toolkit
 
@@ -7,23 +8,25 @@ import LSPIV_toolkit.core.vf.fields as field_lib
 import LSPIV_toolkit.core.utils as vf_utils
 import LSPIV_toolkit.core.plotting as vf_plot
 
-vMax = 3 #m/s
-riverWidth = 100 #meters
+# Scenario Name
+scenarioName = 'pylon'
 
-sourceVF1 = field_lib.DevelopedPipeFlowField(channelWidth=50, vMax=vMax)
-sourceVF2 = field_lib.DevelopedPipeFlowField(channelWidth=50, vMax=2*vMax, offset=(50,0))
-compoundVF = field_lib.CompoundVectorField(sourceVF1, sourceVF2)
+# Scenario Field file name
+scenarioFile = '../scenarios/' + scenarioName + '.scenario'
 
-xGrid = 25 #cells
-yGrid = 8 #cells
-xDist = 100 #meters
-yDist = 50 #meters
+with open(scenarioFile, mode='rb') as f:
+	compoundVF = dill.load(f)
+
+xGrid = 20 #cells
+yGrid = 10 #cells
+
+xDist = compoundVF.extents.xRange[1]
+yDist = compoundVF.extents.yRange[1]
 
 grid = vf_utils.SampleGrid(xDist, yDist, xGrid, yGrid)
 
-vfPlot = vf_plot.SimpleFieldView(compoundVF, grid, 2)
-
+vfPlot = vf_plot.SimpleFieldView(compoundVF, grid, 20)
+vfPlot.setTitle('Scenario 1')
 vfPlot.quiver()
 
-vfPlot2 = vf_plot.SimpleFieldView(sourceVF1, grid, 1)
-vfPlot2.quiver()
+vfPlot.save('../output/' + scenarioName + '.png')

@@ -25,10 +25,10 @@ class MeasurementProcessor(object):
 
 		self._xCellWidth = xDistance / xCellCount			#meters
 		self._xCellHalfWidth = self._xCellWidth / 2.0		#meters
-		self._yCellWidth = yDistance / yCellCount			#meters
+		self._yCellWidth = yDistance / self._yCellCount		#meters
 		self._yCellHalfWidth = self._yCellWidth / 2.0		#meters
 
-		self._maxMeasurementsPerCell = 5
+		self._maxMeasurementsPerCell = 4
 
 		self._measurementBins = defaultdict(list)
 
@@ -45,7 +45,11 @@ class MeasurementProcessor(object):
 		minor_ticks = np.arange(0, xCellCount+1, 1)                                               
 
 		self._ax.set_xticks(major_ticks)                                                       
-		self._ax.set_xticks(minor_ticks, minor=True)                                           
+		self._ax.set_xticks(minor_ticks, minor=True)   
+
+		major_ticks = np.arange(0, self._yCellCount+1, 5)                                              
+		minor_ticks = np.arange(0, self._yCellCount+1, 1) 
+
 		self._ax.set_yticks(major_ticks)                                                       
 		self._ax.set_yticks(minor_ticks, minor=True)
 
@@ -133,11 +137,13 @@ class MeasurementProcessor(object):
 				# use number of measurements in cell
 				#grid[y, x] = len(self._measurementBins[(x,y)])
 
-				# use sum of scores in cell
+				# use avg of scores in cell
 				grid[y, x] = sum(self._measurementBins[(x,y)]) / len(self._measurementBins[(x,y)])
 				#print(grid[y,x])
 
 		#print(grid)
+		self._ax.grid(which='both', alpha=1.0, color='white', linewidth=1)
+
 		
 		if (self._img is None):
 			self._img = self._ax.imshow(grid,cmap=self._cmap,interpolation='nearest', origin='lower', extent=(0, self._xCellCount, 0, self._yCellCount))
@@ -159,7 +165,7 @@ class MeasurementProcessor(object):
 		if (self._timeStamp is not None):
 			self._timeStamp.remove()
 
-		self._timeStamp = self._ax.text(20, 24, annotation)
+		self._timeStamp = self._ax.text(17, 19, annotation)
 		self.drawMeasurementGrid()
 		self._ax.grid(which='both', alpha=1.0, color='white', linewidth=1)
 		self._ax.tick_params(which='both', direction='out')

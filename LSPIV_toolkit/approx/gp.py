@@ -11,9 +11,9 @@ class GPApproximator(VectorFieldApproximator):
 
 		if (kernel is None):
 			# Default kernel
-			self._Kx = GPy.kern.Matern32(2, ARD=True, lengthscale=3) + \
-						GPy.kern.Bias(input_dim=2)
-			self._Ky = GPy.kern.Matern32(2, ARD=True, lengthscale=3) + \
+			self._Kx = GPy.kern.Matern32(2, ARD=True, lengthscale=1)
+			self._Ky = (GPy.kern.Matern32(2, ARD=True, lengthscale=3) +\
+						GPy.kern.Matern32(2, ARD=True, lengthscale=10)) *\
 						GPy.kern.Bias(input_dim=2)
 		else:
 			self._Kx = kernel
@@ -58,15 +58,18 @@ class GPApproximator(VectorFieldApproximator):
 		y2 = np.reshape(y2, (len(vY),1))
 
 
-		self._gpModelX = GPy.models.GPRegression(x, y1, self._Kx, normalizer=False)
-		self._gpModelY = GPy.models.GPRegression(x, y2, self._Ky, normalizer=False)
+		self._gpModelX = GPy.models.GPRegression(x, y1, self._Kx, normalizer=None)
+		self._gpModelY = GPy.models.GPRegression(x, y2, self._Ky, normalizer=None)
 
 		#print(self._gpModelX)
 		#print(self._gpModelY)
+		self._gpModelX.randomize()
+		self._gpModelY.randomize()
 
-		self._gpModelX.optimize(max_iters = 10000)
-		self._gpModelY.optimize(max_iters = 10000)
-
+		self._gpModelX.optimize_restarts(messages=False, optimizer='scg', robust=True, num_restarts=2, max_iters=100000)
+		self._gpModelY.optimize_restarts(messages=False, optimizer='scg', robust=True, num_restarts=2, max_iters=100000)
+		#self._gpModelX.optimize_SGD()
+		#self._gpModelY.optimize_SGD()
 		#print(self._gpModelX)
 		#print(self._gpModelY)
 
@@ -135,6 +138,8 @@ class CoregionalizedGPApproximator(VectorFieldApproximator):
 		self._gpModel = GPy.models.GPCoregionalizedRegression([x, x], [y1, y2], self._coregionalizedK)
 		#print(self._gpModel)
 
+		self._gpModel.randomize()
+
 		# Set constraints
 		self._gpModel['.*ICM.*var'].unconstrain()
 		self._gpModel['.*ICM0.*var'].constrain_fixed(1.)
@@ -146,8 +151,8 @@ class CoregionalizedGPApproximator(VectorFieldApproximator):
 
 		#print(self._gpModel)
 
-		self._gpModel.optimize(messages=False, max_iters=10000, optimizer='lbfgsb')
-
+		#self._gpModel.optimize(messages=False, max_iters=10000, optimizer='lbfgsb')
+		self._gpModel.optimize_restarts(num_restarts=1, max_iters=100000, optimizer='scg')
 		#print(self._gpModel)
 		vfRep = vf.gp_representation.CoregionalizedGPFieldRepresentation(self._gpModel, fieldExtents)
 

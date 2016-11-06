@@ -12,14 +12,14 @@ import LSPIV_toolkit.approx as vf_approx
 import LSPIV_toolkit.core.plotting as vf_plot
 
 
-xGrid = 25 #cells
+xGrid = 20 #cells
 yGrid = 10 #cells
 xDist = 100 #meters
 yDist = 50 #meters
 
 displayGrid = vf_utils.SampleGrid(xDist, yDist, xGrid, yGrid)
 
-with open('../scenarios/pylon.scenario', mode='rb') as f:
+with open('../scenarios/twin_channel.scenario', mode='rb') as f:
 	compoundVF = dill.load(f)
 
 fieldView = vf_plot.SimpleFieldView(compoundVF, displayGrid, 1.0)
@@ -28,15 +28,15 @@ fieldView.quiver()
 
 # Simulation
 
-seedParticles = [(0, (5, 20)), (0, (15, 20)), (0, (25, 20)), (0, (35, 20)), (0, (45, 20)),
-				(0, (55, 20)), (0, (65, 20)), (0, (75, 20)), (0, (85, 20)), (0, (95, 20))]
+seedParticles = [(0, (5, 20)), (3, (20, 5)), (6, (35, 35)), (5, (80, 25)), (6, (45, 15)),
+					(7, (55, 5)), (7, (60, 30)), (8, (93, 5))]
 
 
 simulator = vf_sim.simulators.ParticleSimulator(compoundVF)
 
-tracks = simulator.simulate(seedParticles, time=7, timestep=0.3)
+tracks = simulator.simulate(seedParticles, time=11, timestep=0.33)
 
-vfEstimator = vf_approx.gp.CoregionalizedGPApproximator()
+vfEstimator = vf_approx.gp.GPApproximator()
 for track in tracks:
 	vfEstimator.addMeasurements(track.getMeasurements(scoring='time'))
 
