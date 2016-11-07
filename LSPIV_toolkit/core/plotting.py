@@ -69,9 +69,9 @@ class SimpleFieldView(object):
 
 		self.draw()
 
-	def plotTrack(self, track, color):
+	def plotTrack(self, track, color, marker='o'):
 		t = np.asarray(track.getPointSequence())
-		self._ax.scatter(t[:,0], t[:,1], c=color)
+		self._ax.scatter(t[:,0], t[:,1], c=color, marker=marker)
 		self.draw()
 
 	def changeGrid(self, newGrid):

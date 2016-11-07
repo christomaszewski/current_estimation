@@ -64,18 +64,22 @@ measurementAnalysis  = vf_analysis.MeasurementProcessor(xDist, yDist, xGrid)
 # Simulation
 
 seedParticles = [(2, (5, 20)), (0, (20, 3)), (4, (35, 12)), (3, (80, 10)), (6, (42, 15)),
-					(3, (64, 5)), (5, (55, 23)), (7, (93, 5))]
+					(3, (64, 5)), (5, (55, 23)), (7, (96, 5))]
 
-simTime = 16 #seconds
+simTime = 11 #seconds
 simTimeStep = 0.033 #30fps
+
+boatTime = 5
+boatParticle = [(simTime-1, (66,15)), (simTime-1, (71,31))]
+
 
 renderTimeStep = 1 # number of seconds in between approximations
 
 simulator = vf_sim.simulators.ParticleSimulator(compoundVF)
-
+particleTracks = []
 for t in np.arange(renderTimeStep, simTime, renderTimeStep):
 	particleTracks = simulator.simulate(seedParticles, t, simTimeStep)
-
+	
 	measurementAnalysis.clearMeasurements()
 
 	sourceFieldView.setAnnotation("Time: " + str(t))
@@ -91,7 +95,6 @@ for t in np.arange(renderTimeStep, simTime, renderTimeStep):
 		sourceFieldView.plotTrack(track, colors[c])
 		c = (c+1) % len(colors)
 		#vfEstimator.addMeasurements(track.getMeasurements(scoring='time'))
-
 
 	#print(measurementAnalysis.getMeasurements())
 
@@ -112,6 +115,52 @@ for t in np.arange(renderTimeStep, simTime, renderTimeStep):
 	approxFieldView.save(approxFileName)
 	measurementAnalysis.saveFig(measurementFileName, t)
 
+
+# Boat simulation
+for t in np.arange(simTime, simTime+boatTime, renderTimeStep):
+	boatTrack = simulator.simulate(boatParticle, t, simTimeStep)
+
+	measurementAnalysis.clearMeasurements()
+
+	sourceFieldView.setAnnotation("Time: " + str(t))
+	approxFieldView.setAnnotation("Time: " + str(t))
+
+	sourceFieldView.quiver()
+
+	vfEstimator.clearMeasurements()
+
+	c = 0
+	colors = ['red', 'blue', 'cyan', 'orange', 'green', 'black', 'yellow', 'purple', 'brown']
+	for track in particleTracks:
+		measurementAnalysis.addMeasurements(track.getMeasurements(scoring='time'))
+		sourceFieldView.plotTrack(track, colors[c])
+		c = (c+1) % len(colors)
+
+	# Draw Boat
+	if (boatTrack is not None):
+		tr = boatTrack[0]
+		measurementAnalysis.addMeasurements(tr.getMeasurements(scoring='time'))
+		sourceFieldView.plotTrack(tr, colors[0], marker='^')
+
+
+	#print(measurementAnalysis.getMeasurements())
+
+	#vfEstimator.clearMeasurements()
+	vfEstimator.addMeasurements(measurementAnalysis.getMeasurements())
+	approxVF = vfEstimator.approximate(compoundVF.extents)
+
+	approxFieldView.changeField(approxVF)
+	approxFieldView.quiver()
+	measurementAnalysis.drawMeasurementGrid()
+
+	#Save images
+	sourceFileName = subFolder + '/source_' + str(t) + '.png'
+	approxFileName = subFolder + '/approx_' + str(t) + '.png'
+	measurementFileName = subFolder + '/measurement_' + str(t) + '.png'
+
+	sourceFieldView.save(sourceFileName)
+	approxFieldView.save(approxFileName)
+	measurementAnalysis.saveFig(measurementFileName, t)
 
 
 # Gif generation

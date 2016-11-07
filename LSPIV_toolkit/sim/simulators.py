@@ -18,7 +18,7 @@ class ParticleSimulator(object):
 	def simulate(self, seedParticles, time, timestep):
 		particleTracks = []
 		for (timeSeen, particle) in seedParticles:
-			if (timeSeen > time):
+			if (timeSeen >= time):
 				continue
 				
 			track = vf_core.tracking.Track(position=particle, time=timeSeen)
