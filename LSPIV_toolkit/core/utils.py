@@ -53,33 +53,41 @@ class SampleGrid(object):
 	"""
 
 	def __init__(self, xDistance, yDistance, xCellCount, yCellCount=None):
-		self.__xDist = xDistance 							#meters
-		self.__yDist = yDistance							#meters
-		self.__xCellCount = xCellCount						#cells
+		self._xDist = xDistance 							#meters
+		self._yDist = yDistance							#meters
+		self._xCellCount = xCellCount						#cells
 
 		if (yCellCount is None):
-			self.__yCellCount = xCellCount					#cells
+			self._yCellCount = xCellCount					#cells
 		else:
-			self.__yCellCount = yCellCount					#cells
+			self._yCellCount = yCellCount					#cells
 
-		self.__xCellWidth = xDistance / xCellCount			#meters
-		self.__xCellHalfWidth = self.__xCellWidth / 2.0		#meters
-		self.__yCellWidth = yDistance / yCellCount			#meters
-		self.__yCellHalfWidth = self.__yCellWidth / 2.0		#meters
+		self._totalCells = self._xCellCount * self._yCellCount
 
-		self.__xGrid, self.__yGrid = self.generateGrid()
+		self._xCellWidth = xDistance / xCellCount			#meters
+		self._xCellHalfWidth = self._xCellWidth / 2.0		#meters
+		self._yCellWidth = yDistance / yCellCount			#meters
+		self._yCellHalfWidth = self._yCellWidth / 2.0		#meters
+
+		self._xGrid, self._yGrid = self.generateGrid()
 
 	def generateGrid(self):
 		""" Generates mgrid for used with quiver
 
 		"""
-		return np.mgrid[self.__xCellHalfWidth:(self.__xDist - self.__xCellHalfWidth):(self.__xCellCount * 1j), self.__yCellHalfWidth:(self.__yDist - self.__yCellHalfWidth):(self.__yCellCount * 1j)]
+		return np.mgrid[self._xCellHalfWidth:(self._xDist - self._xCellHalfWidth):(self._xCellCount * 1j), 
+						self._yCellHalfWidth:(self._yDist - self._yCellHalfWidth):(self._yCellCount * 1j)]
 
 
 	@property
 	def mgrid(self):
-		return self.__xGrid, self.__yGrid
+		return (self._xGrid, self._yGrid)
 
 	@property
 	def arange(self):
-		return np.arange(self.__xCellHalfWidth, self.__xDist, self.__xCellWidth), np.arange(self.__yCellHalfWidth, self.__yDist, self.__yCellWidth)
+		return (np.arange(self._xCellHalfWidth, self._xDist, self._xCellWidth), 
+				np.arange(self._yCellHalfWidth, self._yDist, self._yCellWidth))
+
+	@property
+	def size(self):
+		return self._totalCells

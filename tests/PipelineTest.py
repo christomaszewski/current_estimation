@@ -17,6 +17,7 @@ datasetDir = "C:\\Users\\ckt\\Documents\\datasets\\river\\short"
 images = glob.glob(datasetDir + "\\*.tiff")
 list.sort(images)
 datasetTimestep = 0.033 # 29.9 FPS
+renderTimestep = 1
 
 camModel = cv_calib.FisheyeCameraModel()
 camModel.loadModel("..\\calib\\GoProHero3Video2.7K.calib")
@@ -49,6 +50,9 @@ displayGrid = None
 fieldView = vf_plot.SimpleFieldView()
 mFilter = None
 frameTrans = None
+renderTime = 0.0
+
+
 for fileName in images:
 	img = cv2.imread(fileName)
 
@@ -69,12 +73,19 @@ for fileName in images:
 
 	lkTracker.processImage(img, timestamp)
 	timestamp += datasetTimestep
+	renderTime += datasetTimestep
+	if (renderTime < renderTimestep):
+		continue
+
+	renderTime %= renderTimestep
 
 	tracks = lkTracker.getTracks()
 
 	undistortedImg = frameTrans.transformImg(img)
 
 	for tr in tracks:
+		if (tr.age() < renderTimestep):
+			continue
 		# For Plotting only
 		track = frameTrans.transformTrackForPlotting(tr)
 

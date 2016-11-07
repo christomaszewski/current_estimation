@@ -54,6 +54,9 @@ class Track(object):
 	def size(self):
 		return len(self._positions)
 
+	def age(self):
+		return self._time()
+
 	def getPointSequence(self):
 		# Todo: change return format for easy plotting
 		return self._positions

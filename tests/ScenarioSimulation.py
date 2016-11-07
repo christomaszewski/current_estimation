@@ -21,7 +21,7 @@ import LSPIV_toolkit.core.plotting as vf_plot
 plt.ion()
 
 # Scenario Name
-scenarioName = 'pylon'
+scenarioName = 'twin_channel'
 
 # Scenario Field file name
 scenarioFile = '../scenarios/' + scenarioName + '.scenario'
@@ -58,20 +58,22 @@ approxFieldView = vf_plot.SimpleFieldView(grid=displayGrid)
 approxFieldView.setTitle('GP Approximation')
 approxFieldView.setClim(sourceFieldView.clim)
 
+evaluator = vf_approx.eval.GridSampleComparison(displayGrid, sourceField=compoundVF)
+errors = []
 vfEstimator = vf_approx.gp.GPApproximator()
 measurementAnalysis  = vf_analysis.MeasurementProcessor(xDist, yDist, xGrid)
 
 # Simulation
 
 seedParticles = [(2, (5, 20)), (0, (20, 3)), (4, (35, 12)), (3, (80, 10)), (6, (42, 15)),
-					(3, (64, 5)), (5, (55, 23)), (7, (96, 5))]
+					(3, (64, 5)), (5, (59, 25)), (7, (96, 5))]
 
 simTime = 11 #seconds
 simTimeStep = 0.033 #30fps
 
-boatTime = 5
-boatParticle = [(simTime-1, (66,15)), (simTime-1, (71,31))]
-
+boatTime = 4
+boatParticle = [(simTime-1, (66,15)), (simTime-1, (74,31))]
+#(simTime-1, (66,15)), 
 
 renderTimeStep = 1 # number of seconds in between approximations
 
@@ -102,6 +104,10 @@ for t in np.arange(renderTimeStep, simTime, renderTimeStep):
 	vfEstimator.addMeasurements(measurementAnalysis.getMeasurements())
 	approxVF = vfEstimator.approximate(compoundVF.extents)
 
+	evaluator.changeFields(approxField=approxVF)
+	print("Error: ", evaluator.normalError)
+	errors.append(evaluator.normalError)
+
 	approxFieldView.changeField(approxVF)
 	approxFieldView.quiver()
 	measurementAnalysis.drawMeasurementGrid()
@@ -118,7 +124,7 @@ for t in np.arange(renderTimeStep, simTime, renderTimeStep):
 
 # Boat simulation
 for t in np.arange(simTime, simTime+boatTime, renderTimeStep):
-	boatTrack = simulator.simulate(boatParticle, t, simTimeStep)
+	boatTracks = simulator.simulate(boatParticle, t, simTimeStep)
 
 	measurementAnalysis.clearMeasurements()
 
@@ -137,8 +143,8 @@ for t in np.arange(simTime, simTime+boatTime, renderTimeStep):
 		c = (c+1) % len(colors)
 
 	# Draw Boat
-	if (boatTrack is not None):
-		tr = boatTrack[0]
+	for boat in boatTracks:
+		tr = boat
 		measurementAnalysis.addMeasurements(tr.getMeasurements(scoring='time'))
 		sourceFieldView.plotTrack(tr, colors[0], marker='^')
 
@@ -148,6 +154,10 @@ for t in np.arange(simTime, simTime+boatTime, renderTimeStep):
 	#vfEstimator.clearMeasurements()
 	vfEstimator.addMeasurements(measurementAnalysis.getMeasurements())
 	approxVF = vfEstimator.approximate(compoundVF.extents)
+
+	evaluator.changeFields(approxField=approxVF)
+	print("Error: ", evaluator.normalError)
+	errors.append(evaluator.normalError)
 
 	approxFieldView.changeField(approxVF)
 	approxFieldView.quiver()
@@ -163,6 +173,22 @@ for t in np.arange(simTime, simTime+boatTime, renderTimeStep):
 	measurementAnalysis.saveFig(measurementFileName, t)
 
 
+errorArray = np.asarray(errors)
+timeArray = np.arange(len(errorArray)) + 1
+f = plt.figure()
+plt.subplot(211)
+plt.plot(timeArray, errorArray[:, 0], color='blue')
+plt.title("X Error")
+plt.grid(True)
+
+plt.subplot(212)
+plt.plot(timeArray, errorArray[:, 1], color='red')
+plt.title("Y Error")
+plt.grid(True)
+plt.show()
+errorFileName = subFolder + '/errors.png'
+f.savefig(errorFileName, bbox_inches='tight')
+plt.pause(10)
 # Gif generation
 
 measurementGlob = sorted(glob.glob(subFolder + '/measurement_*.png'), key=os.path.getmtime)

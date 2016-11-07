@@ -65,7 +65,7 @@ pylonDivConvExtents = vf_extents.FieldExtents((pylonXPos - pylonWidth, pylonXPos
 pylonDivExtents, pylonSideExtents, pylonConvExtents = pylonDivConvExtents.ySplit(*pylonPartitionAxes)
 
 divFlow = field_lib.DivergingFlowField(3.0, (pylonXPos, 0), pylonDivExtents, decay='linear')
-convFlow = field_lib.ConvergingFlowField(3.0, (pylonXPos, 0), pylonConvExtents, decay='linear')
+convFlow = field_lib.ConvergingFlowField(2.0, (pylonXPos, 0), pylonConvExtents, decay='linear')
 sideFlow = field_lib.UniformVectorField(flowVector=(0.0, 0.1), fieldExtents=pylonSideExtents)
 
 # Pylon flow to counteract uniform flow component
