@@ -93,7 +93,6 @@ class GPApproximator(VectorFieldApproximator):
 			self._Kx = GPy.kern.RatQuad(input_dim=2, ARD=True) +\
 						GPy.kern.White(input_dim=2)
 			self._Ky = GPy.kern.RatQuad(input_dim=2, ARD=True) +\
-						GPy.kern.Bias(input_dim=2) * GPy.kern.Matern32(input_dim=2, ARD=True, lengthscale=1) +\
 						GPy.kern.White(input_dim=2)
 		else:
 			self._Kx = kernel
@@ -138,8 +137,8 @@ class GPApproximator(VectorFieldApproximator):
 		y2 = np.reshape(y2, (len(vY),1))
 
 
-		meanFuncX = GPy.mapping.Constant(2, 1, 0.0)
-		meanFuncY = GPy.mapping.Constant(2, 1, 1.0)
+		meanFuncX = GPy.mappings.Constant(2, 1, 0.0)
+		meanFuncY = GPy.mappings.Constant(2, 1, 1.0)
 
 		self._gpModelX = GPy.models.GPRegression(x, y1, self._Kx, normalizer=True, mean_function=meanFuncX)
 		self._gpModelY = GPy.models.GPRegression(x, y2, self._Ky, normalizer=True, mean_function=meanFuncY)
