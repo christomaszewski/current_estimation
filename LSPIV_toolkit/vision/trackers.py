@@ -39,7 +39,7 @@ class LKOpticalFlowTracker(Tracker):
 
 		newTracks = []
 
-		gridDetector = detectors.GridFeatureDetector(cv2.goodFeaturesToTrack, (5,5), borderBuffer=35)
+		gridDetector = detectors.GridFeatureDetector(cv2.goodFeaturesToTrack, (15,20), borderBuffer=35)
 
 		# If features have never been detected or detectionInverval has lapsed
 		if (self._prevDetectionTime is None or timestamp - self._prevDetectionTime > self._detectionInterval):
@@ -47,6 +47,8 @@ class LKOpticalFlowTracker(Tracker):
 			self._prevDetectionTime = timestamp
 			searchMask = np.zeros_like(grayImg)
 			searchMask[:] = 255
+
+			searchMask[:, -320:] = 0
 
 			# Mask all the current track end points
 			for (x,y) in trackEndpoints:

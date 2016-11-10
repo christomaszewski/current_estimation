@@ -8,19 +8,22 @@ class ParticleSimulator(object):
 
 	"""
 
-	def __init__(self, vectorField):
+	def __init__(self, vectorField=None, noise=0.0001):
 		self._flowField = vectorField
 
 		# todo make this gaussian noise
-		self._observationNoise = 0.0001
+		self._observationNoise = noise
 
 
 	def simulate(self, seedParticles, time, timestep):
+		if (self._flowField is None):
+			return []
+
 		particleTracks = []
 		for (timeSeen, particle) in seedParticles:
 			if (timeSeen >= time):
 				continue
-				
+			
 			track = vf_core.tracking.Track(position=particle, time=timeSeen)
 			for t in np.arange(timeSeen + timestep, time, timestep):
 				_, particlePos = track.getLastObservation()
@@ -33,7 +36,7 @@ class ParticleSimulator(object):
 				observedParticlePos = tuple(map(sum, zip(newParticlePos, 
 					(randX*self._observationNoise, randY*self._observationNoise))))
 
-				track.addObservation(newParticlePos, t)
+				track.addObservation(observedParticlePos, t)
 
 			particleTracks.append(track)
 
@@ -42,3 +45,6 @@ class ParticleSimulator(object):
 	def propagate(self, particlePos, particleVel, time):
 		delta  = (particleVel[0] * time, particleVel[1] * time)
 		return tuple(map(sum, zip(particlePos, delta)))
+
+	def changeField(self, newField):
+		self._flowField = newField

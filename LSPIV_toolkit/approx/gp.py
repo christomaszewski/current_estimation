@@ -137,7 +137,7 @@ class GPApproximator(VectorFieldApproximator):
 
 
 		meanFuncX = GPy.mappings.Constant(2, 1, 0.0)
-		meanFuncY = GPy.mappings.Constant(2, 1, 1.0)
+		meanFuncY = GPy.mappings.Constant(2, 1, 20.0)
 
 		self._gpModelX = GPy.models.GPRegression(x, y1, self._Kx, normalizer=True, mean_function=meanFuncX)
 		self._gpModelY = GPy.models.GPRegression(x, y2, self._Ky, normalizer=True, mean_function=meanFuncY)
@@ -146,8 +146,8 @@ class GPApproximator(VectorFieldApproximator):
 		#print(self._gpModelY)
 		self._gpModelX.randomize()
 		self._gpModelY.randomize()
-		self._gpModelX.optimize_restarts(messages=False, optimizer='tnc', robust=True, num_restarts=2, max_iters=300)
-		self._gpModelY.optimize_restarts(messages=False, optimizer='tnc', robust=True, num_restarts=2, max_iters=300)
+		self._gpModelX.optimize_restarts(messages=False, optimizer='tnc', robust=True, num_restarts=1, max_iters=300)
+		self._gpModelY.optimize_restarts(messages=False, optimizer='tnc', robust=True, num_restarts=1, max_iters=300)
 		#self._gpModelX.optimize_restarts(messages=False, optimizer='lbfgsb', robust=True, num_restarts=2, max_iters=300)
 		#self._gpModelY.optimize_restarts(messages=False, optimizer='lbfgsb', robust=True, num_restarts=2, max_iters=300)
 		#self._gpModelX.optimize_restarts(messages=False, optimizer='scg', robust=True, num_restarts=2, max_iters=300)

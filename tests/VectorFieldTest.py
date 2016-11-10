@@ -9,7 +9,7 @@ import LSPIV_toolkit.core.utils as vf_utils
 import LSPIV_toolkit.core.plotting as vf_plot
 
 # Scenario Name
-scenarioName = 'pylon'
+scenarioName = 'twin_channel'
 
 # Scenario Field file name
 scenarioFile = '../scenarios/' + scenarioName + '.scenario'
@@ -25,7 +25,7 @@ yDist = compoundVF.extents.yRange[1]
 
 grid = vf_utils.SampleGrid(xDist, yDist, xGrid, yGrid)
 
-vfPlot = vf_plot.SimpleFieldView(compoundVF, grid, 20)
+vfPlot = vf_plot.SimpleFieldView(compoundVF, grid, 5)
 vfPlot.setTitle('Scenario 1')
 vfPlot.quiver()
 

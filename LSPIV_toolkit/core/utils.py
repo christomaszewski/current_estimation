@@ -89,5 +89,11 @@ class SampleGrid(object):
 				np.arange(self._yCellHalfWidth, self._yDist, self._yCellWidth))
 
 	@property
+	def cellCenters(self):
+		xRange, yRange = self.arange
+		centers = [(x, y) for x in xRange for y in yRange]
+		return centers
+
+	@property
 	def size(self):
 		return self._totalCells

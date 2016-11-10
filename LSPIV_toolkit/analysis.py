@@ -28,7 +28,7 @@ class MeasurementProcessor(object):
 		self._yCellWidth = yDistance / self._yCellCount		#meters
 		self._yCellHalfWidth = self._yCellWidth / 2.0		#meters
 
-		self._maxMeasurementsPerCell = 10
+		self._maxMeasurementsPerCell = 2#10
 
 		self._measurementBins = defaultdict(list)
 
@@ -146,7 +146,7 @@ class MeasurementProcessor(object):
 
 		
 		if (self._img is None):
-			self._img = self._ax.imshow(grid,cmap=self._cmap,interpolation='nearest', origin='lower', extent=(0, self._xCellCount, 0, self._yCellCount))
+			self._img = self._ax.imshow(grid,cmap=self._cmap,interpolation='nearest', origin='lower', extent=(0, self._xCellCount, 0, self._yCellCount), aspect='auto')
 			self._cbar = plt.colorbar(self._img, ax=self._ax, cmap=self._cmap)	
 			self._cbar.set_clim(0, self._maxMeasurementsPerCell)
 			self._cbar.draw_all()

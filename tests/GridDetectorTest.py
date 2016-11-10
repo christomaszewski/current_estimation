@@ -28,7 +28,7 @@ for image in images:
 
 	searchMask = np.zeros_like(grayImg)
 	searchMask[:] = 255
-	gridDetector = cv_detectors.GridFeatureDetector(cv2.goodFeaturesToTrack, (10,10), borderBuffer=100)
+	gridDetector = cv_detectors.GridFeatureDetector(cv2.goodFeaturesToTrack, (10,15), borderBuffer=100)
 
 	p = cv2.goodFeaturesToTrack(grayImg, mask=searchMask, **feature_params)
 

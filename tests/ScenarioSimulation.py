@@ -58,15 +58,22 @@ approxFieldView = vf_plot.SimpleFieldView(grid=displayGrid)
 approxFieldView.setTitle('GP Approximation')
 approxFieldView.setClim(sourceFieldView.clim)
 
+seedParticles = [(0, p) for p in displayGrid.cellCenters]
+
+streamEval = vf_approx.eval.StreamLineComparison(seedParticles=seedParticles,
+				sourceField=compoundVF, simTime=5, simRes=0.1)
 evaluator = vf_approx.eval.GridSampleComparison(displayGrid, sourceField=compoundVF)
+streamErrors = []
 errors = []
 vfEstimator = vf_approx.gp.GPApproximator()
 measurementAnalysis  = vf_analysis.MeasurementProcessor(xDist, yDist, xGrid)
 
 # Simulation
 
-seedParticles = [(2, (5, 20)), (0, (20, 3)), (4, (35, 12)), (3, (80, 10)), (6, (42, 15)),
-					(3, (64, 5)), (5, (59, 25)), (7, (96, 5))]
+#seedParticles = [(2, (5, 20)), (0, (20, 3)), (4, (35, 12)), (3, (80, 10)), (6, (42, 15)),
+#					(3, (64, 5)), (5, (59, 25)), (7, (96, 5))]
+
+seedParticles = [(0, (5, 20)), (0, (20, 3)), (0, (35, 12)), (0, (55, 5))]
 
 simTime = 11 #seconds
 simTimeStep = 0.033 #30fps
@@ -77,7 +84,7 @@ boatParticle = [(simTime-1, (66,15)), (simTime-1, (74,31))]
 
 renderTimeStep = 1 # number of seconds in between approximations
 
-simulator = vf_sim.simulators.ParticleSimulator(compoundVF)
+simulator = vf_sim.simulators.ParticleSimulator(compoundVF, noise=0)
 particleTracks = []
 for t in np.arange(renderTimeStep, simTime, renderTimeStep):
 	particleTracks = simulator.simulate(seedParticles, t, simTimeStep)
@@ -104,9 +111,12 @@ for t in np.arange(renderTimeStep, simTime, renderTimeStep):
 	vfEstimator.addMeasurements(measurementAnalysis.getMeasurements())
 	approxVF = vfEstimator.approximate(compoundVF.extents)
 
+	streamEval.changeFields(approxField=approxVF)
 	evaluator.changeFields(approxField=approxVF)
 	print("Error: ", evaluator.normalError)
 	errors.append(evaluator.normalError)
+	streamErrors.append(streamEval.error)
+	print("Streamline Error: ", streamEval.error)
 
 	approxFieldView.changeField(approxVF)
 	approxFieldView.quiver()
@@ -120,7 +130,7 @@ for t in np.arange(renderTimeStep, simTime, renderTimeStep):
 	sourceFieldView.save(sourceFileName)
 	approxFieldView.save(approxFileName)
 	measurementAnalysis.saveFig(measurementFileName, t)
-
+"""
 
 # Boat simulation
 for t in np.arange(simTime, simTime+boatTime, renderTimeStep):
@@ -155,9 +165,13 @@ for t in np.arange(simTime, simTime+boatTime, renderTimeStep):
 	vfEstimator.addMeasurements(measurementAnalysis.getMeasurements())
 	approxVF = vfEstimator.approximate(compoundVF.extents)
 
+	streamEval.changeFields(approxField=approxVF)
 	evaluator.changeFields(approxField=approxVF)
 	print("Error: ", evaluator.normalError)
 	errors.append(evaluator.normalError)
+	streamErrors.append(streamEval.error)
+	print("Streamline Error: ", streamEval.error)
+
 
 	approxFieldView.changeField(approxVF)
 	approxFieldView.quiver()
@@ -171,7 +185,7 @@ for t in np.arange(simTime, simTime+boatTime, renderTimeStep):
 	sourceFieldView.save(sourceFileName)
 	approxFieldView.save(approxFileName)
 	measurementAnalysis.saveFig(measurementFileName, t)
-
+"""
 
 errorArray = np.asarray(errors)
 timeArray = np.arange(len(errorArray)) + 1
@@ -189,6 +203,24 @@ plt.show()
 errorFileName = subFolder + '/errors.png'
 f.savefig(errorFileName, bbox_inches='tight')
 plt.pause(10)
+
+errorArray = np.asarray(streamErrors)
+f = plt.figure()
+plt.subplot(211)
+plt.plot(timeArray, errorArray[:, 0], color='blue')
+plt.title("X Streamline Error")
+plt.grid(True)
+
+plt.subplot(212)
+plt.plot(timeArray, errorArray[:, 1], color='red')
+plt.title("Y Streamline Error")
+plt.grid(True)
+plt.show()
+errorFileName = subFolder + '/StreamlineErrors.png'
+f.savefig(errorFileName, bbox_inches='tight')
+plt.pause(10)
+
+
 # Gif generation
 
 measurementGlob = sorted(glob.glob(subFolder + '/measurement_*.png'), key=os.path.getmtime)

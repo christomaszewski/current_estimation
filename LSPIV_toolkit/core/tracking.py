@@ -133,3 +133,28 @@ class Track(object):
 	def _length(self):
 		# Length of track in number of measurements
 		return self.size()
+
+	@property
+	def positions(self):
+		return self._positions
+
+	@property
+	def times(self):
+		return self._times
+
+	def __sub__(self, other):
+		# Only subtracts matching times
+		differences = []
+		for t1, pt1, t2, pt2 in zip(self._times, self._positions, other.times, other.positions):
+			if (t1 == t2):
+				differences.append((pt1[0]-pt2[0], pt1[1]-pt2[1]))
+
+		return differences
+
+	def __rsub__(self, other):
+		differences = []
+		for t1, pt1, t2, pt2 in zip(other.times, other.positions, self._times, self._positions):
+			if (t1 == t2):
+				differences.append((pt1[0]-pt2[0], pt1[1]-pt2[1]))
+
+		return differences
