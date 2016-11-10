@@ -67,6 +67,10 @@ class Track(object):
 		"""
 		self._positions = points
 
+	def smoothTrack(self, smoothingFactor=3):
+		newPoints = []
+
+
 	def getMeasurements(self, method='midpoint', scoring='time'):
 		""" Returns list of measurements representing velocity of particle
 			localizing the measurement using the method specified. Velocity

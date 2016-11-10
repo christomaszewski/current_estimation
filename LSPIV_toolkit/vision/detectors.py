@@ -125,10 +125,10 @@ class BoatDetector(object):
 	"""
 
 	def __init__(self):
-		self._lowerBlue = np.array([100,50,50], np.uint8)
-		self._upperBlue = np.array([130,255,255], np.uint8)
-		self._lowerRed = np.array([160,50,50], np.uint8)
-		self._upperRed = np.array([190,255,255], np.uint8)
+		self._lowerBlue = np.array([95,50,50], np.uint8)
+		self._upperBlue = np.array([115,255,255], np.uint8)
+		self._lowerRed = np.array([165,50,50], np.uint8)
+		self._upperRed = np.array([180,255,255], np.uint8)
 		self._lowerRed2 = np.array([0,50,50], np.uint8)
 		self._upperRed2 = np.array([10,255,255], np.uint8)
 		self._midpoint  = (0,0)
@@ -144,9 +144,10 @@ class BoatDetector(object):
 		redMask = cv2.addWeighted(redMask, 1.0, redMask2, 1.0, 0.0)
 
 		# Erode and dilate mask to remove spurious detections
-		blueMask = cv2.erode(blueMask, None, iterations=2)
-		blueMask = cv2.dilate(blueMask, None, iterations=2)
-
+		blueMask = cv2.erode(blueMask, None, iterations=1)
+		blueMask = cv2.dilate(blueMask, None, iterations=1)
+		#cv2.namedWindow("blue", cv2.WINDOW_NORMAL)
+		#cv2.imshow("blue", blueMask)
 		# Find blue contours
 		blueContours = cv2.findContours(blueMask.copy(), cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)[-2]
 		
@@ -160,12 +161,14 @@ class BoatDetector(object):
 
 		# Find centroid of largest blue contour
 		blueMoments = cv2.moments(maxBlue)
-		blueCentroid = (int(blueMoments["m10"] / blueMoments["m00"]), int(blueMoments["m01"] / blueMoments["m00"]))
+		self._blueCentroid = np.asarray([int(blueMoments["m10"] / blueMoments["m00"]), 
+										int(blueMoments["m01"] / blueMoments["m00"])])
 		
 		# Repeat above process for red contours
-		redMask = cv2.erode(redMask, None, iterations=2)
-		redMask = cv2.dilate(redMask, None, iterations=2)
-
+		redMask = cv2.erode(redMask, None, iterations=1)
+		redMask = cv2.dilate(redMask, None, iterations=1)
+		#cv2.namedWindow("red", cv2.WINDOW_NORMAL)
+		#cv2.imshow("red", redMask)
 		# Find red contours and choose largest
 		redContours = cv2.findContours(redMask.copy(), cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)[-2]
 
@@ -179,27 +182,55 @@ class BoatDetector(object):
 
 		# Find centroid of largest red contour
 		redMoments = cv2.moments(maxRed)
-		redCentroid = (int(redMoments["m10"] / redMoments["m00"]), int(redMoments["m01"] / redMoments["m00"]))
-		
-		dist = np.sqrt((redCentroid[0]-blueCentroid[0])**2+(redCentroid[1]-blueCentroid[1])**2)
-		print(dist)
+		self._redCentroid = np.asarray([int(redMoments["m10"] / redMoments["m00"]), 
+										int(redMoments["m01"] / redMoments["m00"])])
+		diff = self._redCentroid - self._blueCentroid
+		dist = np.linalg.norm(diff)
+		#np.sqrt((redCentroid[0]-blueCentroid[0])**2+(redCentroid[1]-blueCentroid[1])**2)
+		print("Distance between centroids: ", dist)
 
 
 		# If distance between centroids of detected panels matches boat report detection
-		if (dist >= 5 and dist <= 30):
+		if (dist >= 6 and dist <= 13):
 			cv2.drawContours(img,maxBlue,-1,(0,0,255),7)
 			cv2.drawContours(img,maxRed,-1,(255,0,0),7)
 
-			cv2.circle(img, redCentroid, 5, (0,0,0), thickness=-1, lineType=8, shift=0)
-			cv2.circle(img, blueCentroid, 5, (0,0,0), thickness=-1, lineType=8, shift=0)
-			cv2.line(img, redCentroid, blueCentroid, (0,0,0), thickness=2)
+			cv2.circle(img, tuple(self._redCentroid), 5, (0,0,0), thickness=-1, lineType=8, shift=0)
+			cv2.circle(img, tuple(self._blueCentroid), 5, (0,0,0), thickness=-1, lineType=8, shift=0)
+			cv2.line(img, tuple(self._redCentroid), tuple(self._blueCentroid), (0,0,0), thickness=2)
 
-			rise = redCentroid[0]-blueCentroid[0]
-			run = redCentroid[1]-blueCentroid[1]
+			rise = diff[0]
+			run = diff[1]
 
-			self._midpoint = (int(blueCentroid[0]+rise*0.5), int(blueCentroid[1]+run*0.5))
+			self._midpoint = (int(self._blueCentroid[0]+rise*0.5), int(self._blueCentroid[1]+run*0.5))
 			cv2.circle(img, self._midpoint, 5, (0,0,0), thickness=-1)
-			print(self._midpoint)
+			print("Midpoint: ", self._midpoint)
 			return True
 
 		return False
+
+	def getROI(self, img):
+		# Convert image to HSV space
+		hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+
+		# Find image regions which fall into blue and red ranges
+		blueMask = cv2.inRange(hsv, self._lowerBlue, self._upperBlue)
+		redMask = cv2.inRange(hsv, self._lowerRed, self._upperRed)
+		redMask2 = cv2.inRange(hsv, self._lowerRed2, self._upperRed2)
+		redMask = cv2.addWeighted(redMask, 1.0, redMask2, 1.0, 0.0)
+
+		boatMask = cv2.addWeighted(redMask, 1.0, blueMask, 1.0, 0.0)
+
+		boatMask = cv2.erode(boatMask, None, iterations=1)
+		boatMask = cv2.dilate(boatMask, None, iterations=2)
+		cv2.imshow("blue", boatMask)
+
+
+		boatContours = cv2.findContours(boatMask.copy(), cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)[-2]
+		maxBoat = max(boatContours, key=cv2.contourArea)
+
+		return maxBoat
+
+	@property
+	def midpoint(self):
+		return self._midpoint

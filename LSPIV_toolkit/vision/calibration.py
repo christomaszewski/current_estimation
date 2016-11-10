@@ -17,6 +17,7 @@ class FisheyeCameraModel(object):
 		self._cropBounds = [0,0,0,0]
 
 		self._imgSize = imgSize
+		self._initialized = False
 
 	def loadModel(self, fileName):
 		with open(fileName, 'rb') as f:
@@ -41,6 +42,8 @@ class FisheyeCameraModel(object):
 
 		self._newK = newK
 
+		self._initialized = True
+
 	def undistortPoints(self, points):
 		points = np.asarray(points)
 		assert points.ndim == 2 and points.shape[1] == 2
@@ -60,6 +63,10 @@ class FisheyeCameraModel(object):
 			interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
 
 		return undistorted
+
+	@property
+	def initialized(self):
+		return self._initialized
 
 
 class FisheyeCalibration(object):
