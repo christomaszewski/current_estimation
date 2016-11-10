@@ -30,17 +30,18 @@ with open(scenarioFile, mode='rb') as f:
 xDist = compoundVF.extents.xRange[1]
 yDist = compoundVF.extents.yRange[1]
 
-xGrid = 20 #cells
-yGrid = 10 #cells
+xGrid = 25 #cells
+yGrid = 13 #cells
 
-displayGrid = vf_utils.SampleGrid(xDist, yDist, xGrid, yGrid)
+sampleGrid = vf_utils.SampleGrid(xDist, yDist, xGrid, yGrid)
+displayGrid = vf_utils.SampleGrid(xDist, yDist, xGrid+10, yGrid+5)
 
-sourceFieldView = vf_plot.SimpleFieldView(compoundVF, displayGrid)
-sourceFieldView.setTitle('Source Field (Ground Truth)')
+sourceFieldView = vf_plot.SimpleFieldView(compoundVF, sampleGrid)
+sourceFieldView.setTitle('Sampled Source Field')
 
 sourceFieldView.quiver()
 
-approxFieldView = vf_plot.SimpleFieldView(grid=displayGrid)
+approxFieldView = vf_plot.SimpleFieldView(grid=sampleGrid)
 approxFieldView.setTitle('GP Approximation')
 approxFieldView.setClim(sourceFieldView.clim)
 
@@ -52,8 +53,7 @@ evaluator = vf_approx.eval.GridSampleComparison(displayGrid, sourceField=compoun
 
 vfEstimator = vf_approx.gp.GPApproximator()
 
-measurements = compoundVF.generateMeasurementsOnGrid(displayGrid)
-print(measurements)
+measurements = compoundVF.generateMeasurementsOnGrid(sampleGrid)
 vfEstimator.addMeasurements(measurements)
 
 approxVF = vfEstimator.approximate(compoundVF.extents)
@@ -68,5 +68,23 @@ print("Stream Error: ", streamEval.normalError)
 approxFieldView.changeField(approxVF)
 approxFieldView.quiver()
 
+sourceFieldView.save('../output/source.png')
+approxFieldView.save('../output/approx.png')
 
-plt.pause(100)
+sourceFieldView.changeGrid(displayGrid)
+approxFieldView.changeGrid(displayGrid)
+
+sourceFieldView.setTitle('Densely Sampled Source Field')
+approxFieldView.setTitle('Dense GP Approximation')
+
+sourceFieldView.quiver()
+approxFieldView.quiver()
+
+
+sourceFieldView.save('../output/source_dense.png')
+approxFieldView.save('../output/approx_dense.png')
+
+
+
+
+plt.pause(5)

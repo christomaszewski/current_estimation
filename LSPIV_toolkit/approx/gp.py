@@ -121,7 +121,6 @@ class GPApproximator(VectorFieldApproximator):
 
 		print("Processing ", len(self._measurements), " Measurements")
 
-
 		for m in self._measurements:
 			X.append(m.point)
 			vel = m.vector
@@ -135,9 +134,8 @@ class GPApproximator(VectorFieldApproximator):
 		y1 = np.reshape(y1, (len(vX),1))
 		y2 = np.reshape(y2, (len(vY),1))
 
-
-		meanFuncX = GPy.mappings.Constant(2, 1, 0.0)
-		meanFuncY = GPy.mappings.Constant(2, 1, 20.0)
+		meanFuncX = GPy.mappings.Constant(2, 1, np.mean(y1))
+		meanFuncY = GPy.mappings.Constant(2, 1, np.mean(y2))
 
 		self._gpModelX = GPy.models.GPRegression(x, y1, self._Kx, normalizer=True, mean_function=meanFuncX)
 		self._gpModelY = GPy.models.GPRegression(x, y2, self._Ky, normalizer=True, mean_function=meanFuncY)
@@ -146,12 +144,12 @@ class GPApproximator(VectorFieldApproximator):
 		#print(self._gpModelY)
 		self._gpModelX.randomize()
 		self._gpModelY.randomize()
-		self._gpModelX.optimize_restarts(messages=False, optimizer='tnc', robust=True, num_restarts=1, max_iters=300)
-		self._gpModelY.optimize_restarts(messages=False, optimizer='tnc', robust=True, num_restarts=1, max_iters=300)
-		#self._gpModelX.optimize_restarts(messages=False, optimizer='lbfgsb', robust=True, num_restarts=2, max_iters=300)
-		#self._gpModelY.optimize_restarts(messages=False, optimizer='lbfgsb', robust=True, num_restarts=2, max_iters=300)
-		#self._gpModelX.optimize_restarts(messages=False, optimizer='scg', robust=True, num_restarts=2, max_iters=300)
-		#self._gpModelY.optimize_restarts(messages=False, optimizer='scg', robust=True, num_restarts=2, max_iters=300)
+		self._gpModelX.optimize_restarts(messages=False, optimizer='tnc', robust=True, num_restarts=2, max_iters=300)
+		self._gpModelY.optimize_restarts(messages=False, optimizer='tnc', robust=True, num_restarts=2, max_iters=300)
+		self._gpModelX.optimize_restarts(messages=False, optimizer='lbfgsb', robust=True, num_restarts=2, max_iters=300)
+		self._gpModelY.optimize_restarts(messages=False, optimizer='lbfgsb', robust=True, num_restarts=2, max_iters=300)
+		self._gpModelX.optimize_restarts(messages=False, optimizer='scg', robust=True, num_restarts=2, max_iters=300)
+		self._gpModelY.optimize_restarts(messages=False, optimizer='scg', robust=True, num_restarts=2, max_iters=300)
 
 		#print(self._gpModelX)
 		#print(self._gpModelY)

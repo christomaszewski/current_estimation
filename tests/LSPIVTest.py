@@ -3,8 +3,12 @@ import glob
 import numpy as np
 import os
 import time
-import matplotlib.pyplot as plt
 import matplotlib as mpl
+# Uncomment this to run headless/remove tkinter dependency
+#mpl.use('agg')
+import matplotlib.pyplot as plt
+import imageio
+import dill
 
 from context import LSPIV_toolkit
 
@@ -17,7 +21,9 @@ import LSPIV_toolkit.approx as vf_approx
 import LSPIV_toolkit.core.plotting as vf_plot
 import LSPIV_toolkit.analysis as vf_analysis
 
-datasetName = 'lspiv_base'
+headless = False
+
+datasetName = 'lspiv_test'
 datasetDir = '../../../datasets/river/'
 dataset = datasetDir + datasetName
 images = glob.glob(dataset + '/*.tiff')
@@ -34,15 +40,15 @@ subFolder =  outputDir + '/' + time.strftime('%d_%m_%Y_%H_%M_%S')
 if not os.path.exists(subFolder):
 	os.makedirs(subFolder)
 
-
 datasetTimestep = 0.033 # 29.9 FPS
 renderTimestep = 1
 minTrackAge = 0.5
 
 camModel = cv_calib.FisheyeCameraModel()
-camModel.loadModel("..\\calib\\GoProHero3Video2.7K.calib")
+camModel.loadModel('../calib/GoProHero3Video2.7K.calib')
 
-cv2.namedWindow("Input", cv2.WINDOW_NORMAL)
+if (not headless):
+	cv2.namedWindow("Input", cv2.WINDOW_NORMAL)
 
 lk_params = dict( winSize  = (15, 15),
                   maxLevel = 5,
@@ -67,15 +73,21 @@ displayGrid = None
 
 fieldView = vf_plot.SimpleFieldView()
 fieldView.setTitle('Current Flow Estimate')
+
+overlayView = vf_plot.OverlayFieldView()
+overlayView.setTitle('Current Flow Estimate')
+
 mFilter = None
 frameTrans = None
 renderTime = 0.0
 
+font = cv2.FONT_HERSHEY_SIMPLEX
 
 for fileName in images:
 	print("Processing Image: ", fileName)
 	img = cv2.imread(fileName)
 
+	# Need to pull size of image from first image. Todo: save this to the calib file
 	if (frameTrans is None):
 		camModel.initialize(img.shape[:2])
 		frameTrans = cv_utils.FrameTransformation(img.shape[:2], camModel)
@@ -83,33 +95,38 @@ for fileName in images:
 	if (vfExtents is None):
 		cropExtents = frameTrans.getCroppedExtents()
 		vfExtents = vf_extents.FieldExtents(cropExtents[0], cropExtents[1])
+		
 		xDist = cropExtents[0][1]
 		yDist = cropExtents[1][1]
-		print("cropped img size: ", xDist, yDist)
+		
 		displayGrid = vf_utils.SampleGrid(xDist, yDist, xGrid, yGrid)
 		fieldView.changeGrid(displayGrid)
-		mFilter = vf_analysis.MeasurementProcessor(xDist, yDist, xGrid, yGrid)
+		overlayView.changeGrid(displayGrid)
 
-	undistortedImg = camModel.undistortImage(img)
+		mFilter = vf_analysis.MeasurementProcessor(xDist, yDist, xGrid, yGrid)
 
 	lkTracker.processImage(img, timestamp)
 	timestamp += datasetTimestep
 	renderTime += datasetTimestep
 
+	# Skip rendering/writing output files if it is not time
 	if (renderTime < renderTimestep):
 		continue
 
 	renderTime %= renderTimestep
 
+	# Unwarp image and set as background of overlayView
+	undistortedImg = frameTrans.transformImg(img)
+	overlayView.updateImage(undistortedImg)
+
+	# Get latest tracks from Optical flow
 	tracks = lkTracker.getTracks()
 
-	undistortedImg = frameTrans.transformImg(img)
-	b,g,r = cv2.split(undistortedImg)
-	undistortedImgColor = cv2.merge([r,g,b])
-
 	for tr in tracks:
+		# Skip tracks that are too young
 		if (tr.age() < minTrackAge):
 			continue
+
 		# For Plotting only
 		track = frameTrans.transformTrackForPlotting(tr)
 
@@ -119,49 +136,59 @@ for fileName in images:
 		cv2.polylines(undistortedImg, [np.int32(ptSeq)], False, (255,0,0))
 		
 		mFilter.addMeasurements(newTrack.getMeasurements())
-		#print(len(mFilter.getMeasurements()))
-		#vfEstimator.addMeasurements(mFilter.getMeasurements())
 
-	cv2.imshow("Input", undistortedImg)
-	outputFile = subFolder + '/img_' + str(int(timestamp)) + '.png'
-	cv2.imwrite(outputFile, undistortedImg)
-
-	approxFileName = subFolder + '/approx_' + str(int(timestamp)) + '.png'
-
-
-
-
+	# Compute Approximation
 	vfEstimator.clearMeasurements()
 	vfEstimator.addMeasurements(mFilter.getMeasurements())
+	approxVF = vfEstimator.approximate(vfExtents)
+
+	# Define output file names
+	timeString = str(int(timestamp))
+	outputFile = subFolder + '/img_' + timeString + '.png'
+	approxFile = subFolder + '/approx_' + timeString + '.png'
+	overlayFile = subFolder + '/overlay_' + timeString + '.png'
+	measurementFile = subFolder + '/measurements_' + timeString + '.png'
+
+	# Update Annotations
+	annoation = 'Time: ' + timeString
+	overlayView.setAnnotation(' (' + annoation + ')')
+	fieldView.setAnnotation(' (' + annoation + ')')
+	mFilter.setAnnotation(' (' + annoation + ')')
+	cv2.putText(undistortedImg, annoation, (500,100), font, 1, 
+				(255,255,255), 2, cv2.LINE_AA)
+
+	# Update visuals
+	if (not headless):
+		cv2.imshow("Input", undistortedImg)
+	overlayView.changeField(approxVF)
+	fieldView.changeField(approxVF)
 	mFilter.drawMeasurementGrid()
-	vfApprox = vfEstimator.approximate(vfExtents)
 
-	xgrid, ygrid = displayGrid.mgrid
-	xSamples, ySamples = vfApprox.sampleAtGrid(xgrid, ygrid)
-	magnitudes = np.sqrt(xSamples**2 + ySamples**2)
-
-	clim = [magnitudes.min(), magnitudes.max()]
-
-	f = plt.figure()
-	ax = f.add_subplot(1,1,1)
-	
-	q = plt.quiver(xgrid, ygrid, xSamples, ySamples, magnitudes,
-				clim=clim, angles='xy', scale_units='xy', scale=1, cmap=plt.cm.jet)
-	plt.hold(True)
-	
-	undistortedImgColor = np.flipud(undistortedImgColor)
-	plt.imshow(undistortedImgColor, origin='lower', aspect='auto')
-	f.colorbar(q, ax=ax)
-	plt.show()
-	overlayFile = subFolder + '/overlay_' + str(int(timestamp)) + '.png'
-	plt.savefig()
-	plt.close()
+	# Save output files
+	overlayView.save(overlayFile)
+	fieldView.save(approxFile)
+	mFilter.saveFig(measurementFile)
+	cv2.imwrite(outputFile, undistortedImg)
 
 
-	fieldView.changeField(vfApprox)
-	fieldView.save(approxFileName)
+# Process output images and generate gifs
+tracksGlob = sorted(glob.glob(subFolder + '/img_*.png'), key=os.path.getmtime)
+measurementGlob = sorted(glob.glob(subFolder + '/measurements_*.png'), key=os.path.getmtime)
+approxGlob = sorted(glob.glob(subFolder + '/approx_*.png'), key=os.path.getmtime)
+overlayGlob = sorted(glob.glob(subFolder + '/overlay_*.png'), key=os.path.getmtime)
 
+images = [imageio.imread(file) for file in measurementGlob]
+imageio.mimsave(subFolder + '/measurements.gif', images, duration=1, loop=2)
 
-	ch = 0xFF & cv2.waitKey(10)
-	if ch == 27:
-		break
+images = [imageio.imread(file) for file in tracksGlob]
+imageio.mimsave(subFolder + '/tracks.gif', images, duration=1, loop=2)
+
+images = [imageio.imread(file) for file in approxGlob]
+imageio.mimsave(subFolder + '/approx.gif', images, duration=1, loop=2)
+
+images = [imageio.imread(file) for file in overlayGlob]
+imageio.mimsave(subFolder + '/overlay.gif', images, duration=1, loop=2)
+
+# Save final approximation to disk
+with open(subFolder + '/approxVf.scenario', mode='wb') as f:
+	dill.dump(approxVF, f)

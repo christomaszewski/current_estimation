@@ -28,12 +28,12 @@ class MeasurementProcessor(object):
 		self._yCellWidth = yDistance / self._yCellCount		#meters
 		self._yCellHalfWidth = self._yCellWidth / 2.0		#meters
 
-		self._maxMeasurementsPerCell = 2#10
+		self._maxMeasurementsPerCell = 10
 
 		self._measurementBins = defaultdict(list)
 
 		plt.ion()
-		self._fig = plt.figure()
+		self._fig = plt.figure(figsize=(14, 10), dpi=100)
 		self._ax = self._fig.add_subplot(1,1,1)
 		self._fig.canvas.draw()
 		self._img = None
@@ -60,6 +60,8 @@ class MeasurementProcessor(object):
 		self._ax.yaxis.set_major_formatter(ticks_y)
 
 		self._timeStamp = None
+
+		self._annotation = ''
 
 
 	def addMeasurements(self, measurements):
@@ -157,16 +159,18 @@ class MeasurementProcessor(object):
 		self._fig.canvas.draw()
 		#plt.draw()
 
+	def setAnnotation(self, text):
+		self._annotation = text
+
 	def saveFig(self, filename, timestamp=None):
-		annotation = "Time: "
-		if (timestamp is not None):
-			annotation += str(timestamp)
 
 		if (self._timeStamp is not None):
 			self._timeStamp.remove()
 
-		self._timeStamp = self._ax.text(17, 19, annotation)
+		#self._timeStamp = self._ax.text(17, 19, annotation)
+
 		self.drawMeasurementGrid()
+		self._ax.set_title('Measurement Distribution' + self._annotation)
 		self._ax.grid(which='both', alpha=1.0, color='white', linewidth=1)
 		self._ax.tick_params(which='both', direction='out')
-		self._fig.savefig(filename, bbox_inches='tight')
+		self._fig.savefig(filename, bbox_inches='tight', dpi=100)
