@@ -14,16 +14,18 @@ from context import LSPIV_toolkit
 
 import LSPIV_toolkit.vision.calibration as cv_calib
 import LSPIV_toolkit.vision.utils as cv_utils
+import LSPIV_toolkit.vision.detectors as cv_detectors
 import LSPIV_toolkit.vision.trackers as cv_trackers
 import LSPIV_toolkit.core.utils as vf_utils
 import LSPIV_toolkit.core.vf.extents as vf_extents
 import LSPIV_toolkit.approx as vf_approx
+import LSPIV_toolkit.core as vf_core
 import LSPIV_toolkit.core.plotting as vf_plot
 import LSPIV_toolkit.analysis as vf_analysis
 
 headless = False
 
-datasetName = 'lspiv_test'
+datasetName = 'lspiv_base'
 datasetDir = '../../../datasets/river/'
 dataset = datasetDir + datasetName
 images = glob.glob(dataset + '/*.tiff')
@@ -138,9 +140,9 @@ for fileName in images:
 		mFilter.addMeasurements(newTrack.getMeasurements())
 
 	# Compute Approximation
-	vfEstimator.clearMeasurements()
-	vfEstimator.addMeasurements(mFilter.getMeasurements())
-	approxVF = vfEstimator.approximate(vfExtents)
+	#vfEstimator.clearMeasurements()
+	#vfEstimator.addMeasurements(mFilter.getMeasurements())
+	#approxVF = vfEstimator.approximate(vfExtents)
 
 	# Define output file names
 	timeString = str(int(timestamp))
@@ -156,21 +158,21 @@ for fileName in images:
 	mFilter.setAnnotation(' (' + annoation + ')')
 	cv2.putText(undistortedImg, annoation, (500,100), font, 1, 
 				(255,255,255), 2, cv2.LINE_AA)
-
+	
 	# Update visuals
 	if (not headless):
 		cv2.imshow("Input", undistortedImg)
-	overlayView.changeField(approxVF)
-	fieldView.changeField(approxVF)
+	#overlayView.changeField(approxVF)
+	#fieldView.changeField(approxVF)
 	mFilter.drawMeasurementGrid()
-
+"""
 	# Save output files
 	overlayView.save(overlayFile)
 	fieldView.save(approxFile)
 	mFilter.saveFig(measurementFile)
 	cv2.imwrite(outputFile, undistortedImg)
-
-
+	"""
+"""
 # Process output images and generate gifs
 tracksGlob = sorted(glob.glob(subFolder + '/img_*.png'), key=os.path.getmtime)
 measurementGlob = sorted(glob.glob(subFolder + '/measurements_*.png'), key=os.path.getmtime)
@@ -192,3 +194,64 @@ imageio.mimsave(subFolder + '/overlay.gif', images, duration=1, loop=2)
 # Save final approximation to disk
 with open(subFolder + '/approxVf.scenario', mode='wb') as f:
 	dill.dump(approxVF, f)
+"""
+
+datasetName = 'boat_right'
+datasetDir = '../../../datasets/river/'
+dataset = datasetDir + datasetName
+images = glob.glob(dataset + '/*.tiff')
+list.sort(images)
+
+datasetTimestep = 0.033 # 29.9 FPS
+renderTimestep = 1
+minTrackAge = 0.5
+
+boatDetector = cv_detectors.BoatDetector()
+
+boatTrack = vf_core.tracking.Track()
+
+timeStamp = 0.0
+
+for fileName in images:
+	print("Processing Image: ", fileName)
+	img = cv2.imread(fileName)
+
+	if (not camModel.initialized):
+		camModel.initialize(img.shape[:2])
+		frameTrans = cv_utils.FrameTransformation(img.shape[:2], camModel)
+
+	undistortedImg = frameTrans.transformImg(img)
+	result = boatDetector.detect(undistortedImg.copy())
+	
+	if (result):
+		# Flip y coodinates to change from image to field frame
+		xPos, yPos = boatDetector.midpoint
+		boatTrack.addObservation((xPos, 700-yPos), timeStamp)
+
+	timeStamp += datasetTimestep
+
+#wrong - just need to flip y axis
+
+mFilter.addMeasurements(boatTrack.getMeasurements(scoring='constant'))
+vfEstimator.clearMeasurements()
+vfEstimator.addMeasurements(mFilter.getMeasurements())
+approxVF = vfEstimator.approximate(vfExtents)
+
+overlayView.setAnnotation('ASV Augmented')
+fieldView.setAnnotation('ASV Augmented')
+mFilter.setAnnotation('ASV Augmented')
+
+overlayView.changeField(approxVF)
+fieldView.changeField(approxVF)
+mFilter.drawMeasurementGrid()
+
+timeString = str(int(timestamp))
+outputFile = subFolder + '/img.png'
+approxFile = subFolder + '/approx.png'
+overlayFile = subFolder + '/overlay.png'
+measurementFile = subFolder + '/measurements.png'
+
+overlayView.save(overlayFile)
+fieldView.save(approxFile)
+mFilter.saveFig(measurementFile)
+cv2.imwrite(outputFile, undistortedImg)

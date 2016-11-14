@@ -20,10 +20,15 @@ import LSPIV_toolkit.core.vf.extents as vf_extents
 import LSPIV_toolkit.approx as vf_approx
 import LSPIV_toolkit.core.plotting as vf_plot
 import LSPIV_toolkit.analysis as vf_analysis
+import LSPIV_toolkit.sim.simulators as vf_sim
 
 headless = False
 
-datasetName = 'boat_right'
+savedDataFilename = '../output/lspiv_base/complete/approxVF.scenario'
+with open(savedDataFilename, mode='rb') as f:
+	approxVF = dill.load(f)
+
+datasetName = 'boat_center_2'
 datasetDir = '../../../datasets/river/'
 dataset = datasetDir + datasetName
 images = glob.glob(dataset + '/*.tiff')
@@ -63,6 +68,8 @@ roi_hist = None
 mask = None
 trackWindow = None
 term_crit = ( cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 1 )
+undistortedImg = None
+cropExtents = None
 
 for fileName in images:
 	print("Processing Image: ", fileName)
@@ -71,6 +78,7 @@ for fileName in images:
 	if (not camModel.initialized):
 		camModel.initialize(img.shape[:2])
 		frameTrans = cv_utils.FrameTransformation(img.shape[:2], camModel)
+		cropExtents = frameTrans.getCroppedExtents()
 
 
 	undistortedImg = frameTrans.transformImg(img)
@@ -78,41 +86,14 @@ for fileName in images:
 
 	
 	if (result):
-		boatTrack.addObservation(boatDetector.midpoint, timeStamp)
+		# Flip y coodinates to change from image to field frame
+		xPos, yPos = boatDetector.midpoint
+		boatTrack.addObservation((xPos, 700-yPos), timeStamp)
 
-	"""
-	if (result and roi is None):
-		roi = boatDetector.getROI(undistortedImg)
-		x, y, w, h = cv2.boundingRect(roi)
-		trackWindow = (x, y, w, h)
-		roi_img = undistortedImg[y:y+h, x:x+w]
-		hsv_roi = cv2.cvtColor(roi_img, cv2.COLOR_BGR2HSV)
-		mask = cv2.inRange(hsv_roi, np.array((0., 60.,32.)), np.array((180.,255.,255.)))
-		mask_roi = mask[y:y+h, x:x+w]
-		roi_hist = cv2.calcHist([hsv_roi],[0, 1],mask_roi,[180, 256],[0,180, 0, 256])
-		roi_hist.reshape(-1)
-		cv2.normalize(roi_hist,roi_hist,0,255,cv2.NORM_MINMAX)
-
-	(x, y, w, h) = trackWindow
-	#rect = cv2.minAreaRect(roi)
-	#box = cv2.boxPoints(rect)
-	
-	hsv = cv2.cvtColor(undistortedImg, cv2.COLOR_BGR2HSV)
-	dst = cv2.calcBackProject([hsv],[0,1],roi_hist,[0,180, 0, 256],1)
-
-	# apply meanshift to get the new location
-	ret, trackWindow = cv2.CamShift(dst, trackWindow, term_crit)
-
-	# Draw it on image
-	pts = cv2.boxPoints(ret)
-	pts = np.int0(pts)
-	x, y, w, h = trackWindow
-	#cv2.polylines(undistortedImg,[pts],True, 255,2)
-	cv2.rectangle(undistortedImg, (x,y), (x+w,y+h), 255,2)
-	"""
 	timeStamp += datasetTimestep
 
 	ptSeq = boatTrack.getPointSequence()
+	"""
 	cv2.polylines(undistortedImg, [np.int32(ptSeq)], False, (255,0,0))
 
 	cv2.imshow('Input', undistortedImg)
@@ -120,3 +101,46 @@ for fileName in images:
 	ch = 0xFF & cv2.waitKey(1)
 	if ch == 27:
 		break
+	"""
+
+ptSeq = boatTrack.getPointSequence()
+interim = np.int32(ptSeq)
+interim[:, 1] = 700 - interim[:, 1]
+
+cv2.polylines(undistortedImg, [interim], False, (255,0,0))
+
+# Get Boat start point
+boatStartTime, boatStartPoint = boatTrack[0]
+
+# Reset boat start point time
+boatStart = (0, (boatStartPoint[0], boatStartPoint[1]))
+
+simTime = boatTrack.age()
+
+sim = vf_sim.ParticleSimulator(approxVF, noise=0)
+
+simulatedTrack = sim.simulate([boatStart], simTime, datasetTimestep)
+ptSeq = simulatedTrack[0].getPointSequence()
+interim = np.int32(ptSeq)
+interim[:, 1] = 700 - interim[:, 1]
+
+cv2.polylines(undistortedImg, [interim], False, (0,0,255))
+cv2.imshow('Input', undistortedImg)
+
+xGrid = 25 #cells
+yGrid = 15 #cells
+xDist = cropExtents[0][1]
+yDist = cropExtents[1][1]
+
+grid = vf_core.utils.SampleGrid(xDist, yDist, xGrid, yGrid)
+
+overlayView = vf_plot.OverlayFieldView()
+overlayView.setTitle('Current Flow Estimate')
+overlayView.changeGrid(grid)
+overlayView.updateImage(undistortedImg)
+overlayView.changeField(approxVF)
+overlayView.quiver()
+overlayView.plotTrack(simulatedTrack[0], color='red')
+
+cv2.waitKey()
+cv2.imwrite(subFolder + '/trackCompare.png', undistortedImg)

@@ -138,6 +138,9 @@ class Track(object):
 		# Length of track in number of measurements
 		return self.size()
 
+	def _constant(self):
+		return 999999
+
 	@property
 	def positions(self):
 		return self._positions

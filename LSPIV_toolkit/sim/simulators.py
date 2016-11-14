@@ -29,7 +29,7 @@ class ParticleSimulator(object):
 				_, particlePos = track.getLastObservation()
 				particleVel  = self._flowField.sampleAtPoint(particlePos)
 				newParticlePos = self.propagate(particlePos, particleVel, timestep)
-
+				
 				randX = 0.5 - np.random.random()
 				randY = 0.5 - np.random.random()
 

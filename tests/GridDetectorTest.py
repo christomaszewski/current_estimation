@@ -6,15 +6,16 @@ from context import LSPIV_toolkit
 import LSPIV_toolkit.vision.detectors as cv_detectors
 
 
-datasetDir = "C:\\Users\\ckt\\Documents\\datasets\\river\\test"
+datasetDir = '../../../datasets/river/test'
 
 cv2.namedWindow('imgPartitioned', cv2.WINDOW_NORMAL)
 cv2.namedWindow('imgFull', cv2.WINDOW_NORMAL)
+cv2.namedWindow('mask', cv2.WINDOW_NORMAL)
 
 images = glob.glob(datasetDir + "\\*.tiff")
 list.sort(images)
 
-feature_params = dict( maxCorners = 100,
+feature_params = dict( maxCorners = 600,
                        qualityLevel = 0.3,
                        minDistance = 5,
                        blockSize = 7)
@@ -28,7 +29,12 @@ for image in images:
 
 	searchMask = np.zeros_like(grayImg)
 	searchMask[:] = 255
-	gridDetector = cv_detectors.GridFeatureDetector(cv2.goodFeaturesToTrack, (10,15), borderBuffer=100)
+	searchMask[:300, -1200:] = 0
+	searchMask[300:850, -1100:] = 0
+	searchMask[:, -300:] = 0
+	searchMask[850:1100, -800:-400] = 0
+	cv2.imshow('mask', searchMask)
+	gridDetector = cv_detectors.GridFeatureDetector(cv2.goodFeaturesToTrack, (15,20), borderBuffer=35)
 
 	p = cv2.goodFeaturesToTrack(grayImg, mask=searchMask, **feature_params)
 

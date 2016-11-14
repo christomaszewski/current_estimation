@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 
 from ..core import vf
 from ..core import utils as vf_utils
@@ -41,6 +42,26 @@ class GridSampleComparison(object):
 		self._grid = sampleGrid
 		self._invalidate()
 
+	def plotErrors(self):
+		self._fig = plt.figure(figsize=(14, 10), dpi=100)
+		self._ax = self._fig.add_subplot(1,1,1)
+		self._ax.set_title('Error Vectors')
+		xGrid, yGrid = self._grid.mgrid
+		magnitudes = np.sqrt(self._xDiff**2 + self._yDiff**2)
+		clim = [magnitudes.min(), magnitudes.max()]
+		self._q = self._ax.quiver(xGrid, yGrid, self._xDiff, self._yDiff, magnitudes, 
+						clim=clim, angles='xy', scale_units='xy', scale=1, cmap=plt.cm.jet)
+
+		self._ax.axis(self._source.plotExtents)
+		self._ax.minorticks_on()
+		self._ax.grid(which='both', alpha=1.0, linewidth=1)
+		self._ax.tick_params(which='both', direction='out')
+		self._fig.colorbar(self._q, ax=self._ax)
+
+		plt.show()
+		plt.pause(10)
+
+
 	def _compute(self):
 		# Check if computation is possible
 		if (self._source is None or self._approx is None or self._grid is None):
@@ -72,6 +93,13 @@ class GridSampleComparison(object):
 		
 		return (self._sumSquaredDiffX / self._grid.size, 
 				self._sumSquaredDiffY / self._grid.size)
+
+	@property
+	def errorVectors(self):
+		if (self._xDiff is None or self._yDiff is None):
+			self._compute()
+
+		return (self._xDiff, self._yDiff)
 
 
 

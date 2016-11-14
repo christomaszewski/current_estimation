@@ -106,6 +106,8 @@ class OverlayFieldView(object):
 		# Assume incoming image is in opencv format
 		if (img is not None):
 			self.updateImage(img)
+		else:
+			self._img = None
 
 		plt.ion()
 		self._fig = plt.figure(figsize=(14, 10), dpi=100)
