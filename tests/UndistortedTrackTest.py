@@ -23,8 +23,8 @@ lk_params = dict( winSize  = (15, 15),
                   maxLevel = 5,
                   criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03))
 
-feature_params = dict( maxCorners = 500,
-                       qualityLevel = 0.3,
+feature_params = dict( maxCorners = 600,
+                       qualityLevel = 0.5,
                        minDistance = 5,
                        blockSize = 7 )
 
@@ -40,6 +40,21 @@ for fileName in images:
 	if (frameTrans is None):
 		frameTrans = cv_utils.FrameTransformation(img.shape[:2], camModel)
 
+	# Draw detection Lines
+	heightStep = int((img.shape[0] - 70) / 15)
+	widthStep = int((img.shape[1] - 70) / 20)
+	for i in np.arange(35, img.shape[0]-heightStep-35+1, heightStep):
+
+		cv2.line(img, (35, i), (img.shape[1]-35, i), (0,255,0), 3)
+		for j in np.arange(35, img.shape[1]-widthStep-35+1, widthStep):
+
+			cv2.line(img, (j, 35), (j, img.shape[0]-35), (0,255,0), 3)
+
+	cv2.line(img, (img.shape[1]-35, 35), (img.shape[1]-35, img.shape[0]-35), (0,255,0), 3 )
+	cv2.line(img, (35, img.shape[0]-35), (img.shape[1]-35, img.shape[0]-35), (0,255,0), 3 )
+
+
+
 	undistortedImg = frameTrans.transformImg(img)
 
 	lkTracker.processImage(img, timestamp)
@@ -53,13 +68,13 @@ for fileName in images:
 		cv2.polylines(img, [np.int32(ptSeq)], False, (255,0,0))
 
 		undistortedPtSeq = track.getPointSequence()
-		cv2.polylines(undistortedImg, [np.int32(undistortedPtSeq)], False, (0,0,255))
+		cv2.polylines(undistortedImg, [np.int32(undistortedPtSeq)], False, (255,0,0))
 
 	
 	cv2.imshow("Original", img)
 	cv2.imshow("Undistorted", undistortedImg)
 
-	ch = 0xFF & cv2.waitKey(10)
+	ch = 0xFF & cv2.waitKey(1)
 	if ch == 27:
 		cv2.imwrite("original.png", img)
 		cv2.imwrite("undistorted.png", undistortedImg)

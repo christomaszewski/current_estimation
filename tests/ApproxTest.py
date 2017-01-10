@@ -31,11 +31,11 @@ if __name__ == '__main__':
 	xDist = compoundVF.extents.xRange[1]
 	yDist = compoundVF.extents.yRange[1]
 
-	xGrid = 25 #cells
-	yGrid = 13 #cells
+	xGrid = 35 #cells
+	yGrid = 15 #cells
 
 	sampleGrid = vf_utils.SampleGrid(xDist, yDist, xGrid, yGrid)
-	displayGrid = vf_utils.SampleGrid(xDist, yDist, xGrid+10, yGrid+5)
+	displayGrid = vf_utils.SampleGrid(xDist, yDist, xGrid+15, yGrid+5)
 
 	sourceFieldView = vf_plot.SimpleFieldView(compoundVF, sampleGrid)
 	sourceFieldView.setTitle('Sampled Source Field')
@@ -50,7 +50,8 @@ if __name__ == '__main__':
 
 	streamEval = vf_approx.eval.StreamLineComparison(seedParticles=seedParticles,
 					sourceField=compoundVF, simTime=5, simRes=0.1)
-	evaluator = vf_approx.eval.GridSampleComparison(displayGrid, sourceField=compoundVF)
+	sampleEvaluator = vf_approx.eval.GridSampleComparison(sampleGrid, sourceField=compoundVF)
+	displayEvaluator = vf_approx.eval.GridSampleComparison(displayGrid, sourceField=compoundVF)
 
 	vfEstimator = vf_approx.gp.GPApproximator()
 
@@ -59,13 +60,42 @@ if __name__ == '__main__':
 
 	approxVF = vfEstimator.approximate(compoundVF.extents)
 
-	evaluator.changeFields(sourceField=compoundVF, approxField=approxVF)
+	sampleEvaluator.changeFields(sourceField=compoundVF, approxField=approxVF)
+	displayEvaluator.changeFields(sourceField=compoundVF, approxField=approxVF)
 	streamEval.changeFields(sourceField=compoundVF, approxField=approxVF)
 
-	print("Error: ", evaluator.normalError)
-	print("Stream Error: ", streamEval.normalError)
+	print("Sample Sum Squared Error: ", sampleEvaluator.error)
+	print("Sample Normal Error: ", sampleEvaluator.normalError)
+	print("Sample Min Error: ", sampleEvaluator.minError)
+	print("Sample Max Error: ", sampleEvaluator.maxError)
+	print("Sample Mean Error: ", sampleEvaluator.meanError)
+	print("Sample Standard Dev of Error: ", sampleEvaluator.errorStd)
 
-	evaluator.plotErrors()
+	print("Display Error: ", displayEvaluator.normalError)
+	print("Display Sum Squared Error: ", displayEvaluator.error)
+	print("Display Normal Error: ", displayEvaluator.normalError)
+	print("Display Min Error: ", displayEvaluator.minError)
+	print("Display Max Error: ", displayEvaluator.maxError)
+	print("Display Mean Error: ", displayEvaluator.meanError)
+	print("Display Standard Dev of Error: ", displayEvaluator.errorStd)
+
+	print("Normal Stream Error: ", streamEval.normalError)
+	print("Stream Error: ", streamEval.error)
+
+	streamEval.plotErrors(displayGrid)
+	streamEval.save('../output/stream_sample_approx.png')
+
+	streamEval.plotErrors(displayGrid, field='source')
+	streamEval.save('../output/stream_sample_source.png')
+
+	streamEval.plotStreamlineComparison()
+	streamEval.save('../output/streamline_comp.png')
+
+
+	sampleEvaluator.plotErrors()
+	sampleEvaluator.save('../output/sample_errors.png')
+	displayEvaluator.plotErrors()
+	displayEvaluator.save('../output/display_errors.png')
 	
 	approxFieldView.changeField(approxVF)
 	approxFieldView.quiver()
@@ -84,5 +114,8 @@ if __name__ == '__main__':
 
 	sourceFieldView.save('../output/source_dense.png')
 	approxFieldView.save('../output/approx_dense.png')
+
+	with open('../scenarios/approx_pylon.scenario', mode='wb') as f:
+		dill.dump(approxVF, f)
 
 	plt.pause(5)

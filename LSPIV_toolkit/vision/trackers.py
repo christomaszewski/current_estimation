@@ -49,16 +49,16 @@ class LKOpticalFlowTracker(Tracker):
 			searchMask[:] = 255
 
 			# Masks right side of image
-			searchMask[:, -320:] = 0
+			#searchMask[:, -320:] = 0
 
 			# Masks shadow region
-			"""
-			searchMask[:300, -1150:] = 0
+			
+			searchMask[:300, -1200:] = 0
 			searchMask[300:850, -1100:] = 0
 			searchMask[:, -300:] = 0
 			searchMask[850:1100, -800:-400] = 0
-			"""
 			
+
 			# Mask all the current track end points
 			for (x,y) in trackEndpoints:
 				cv2.circle(searchMask, (x,y), 5, 0, -1)

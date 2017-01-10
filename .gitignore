@@ -1,0 +1,6 @@
+/output/*
+*.png
+*.avi
+__pycache__
+*.sublime-project
+*.sublime-workspace

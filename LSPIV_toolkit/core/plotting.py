@@ -65,18 +65,45 @@ class SimpleFieldView(object):
 		self._ax.grid(which='both', alpha=1.0, linewidth=1)
 		self._ax.tick_params(which='both', direction='out')
 
-		self._fig.colorbar(self._q, ax=self._ax)
-
+		c = self._fig.colorbar(self._q, ax=self._ax)
+		c.set_label('px/s')
 
 		self.draw()
 
 		# Force recomputation of colorbar
 		self._clim = None
 
-	def plotTrack(self, track, color, marker='o'):
+	def plotTrack(self, track, color, marker='o', label='default'):
+		#self._fig.clf()
+		self._ax = self._fig.add_subplot(1,1,1)
+		self._ax.grid(True)
+		self._ax.axis([0, 10, 0, 10])
+		self._ax.hold(True)
 		t = np.asarray(track.getPointSequence())
-		self._ax.scatter(t[:,0], t[:,1], c=color, marker=marker)
+		self._ax.scatter(t[:,0], t[:,1], c=color, marker=marker, s=150, label=label)
+		self._ax.plot(t[:,0], t[:,1], c=color)
+		plt.xticks(np.arange(0, 11, 2.0))
+		plt.yticks(np.arange(0, 11, 2.0))
+		plt.legend()
+
+
 		self.draw()
+
+	def clearFig(self):
+		self._fig.clf()
+
+
+	def plotMeasurements(self, measurements, color, label):
+		self._ax = self._fig.add_subplot(1,1,1)
+		self._ax.grid(True)
+		self._ax.axis([0, 10, 0, 10])
+		self._ax.hold(True)
+		t = np.asarray([m.point for m in measurements])
+		self._ax.scatter(t[:,0], t[:,1], c=color, marker='o', s=150, label=label)
+		plt.xticks(np.arange(0, 11, 2.0))
+		plt.yticks(np.arange(0, 11, 2.0))
+		plt.legend()
+
 
 	def changeGrid(self, newGrid):
 		self._grid = newGrid
@@ -171,8 +198,8 @@ class OverlayFieldView(object):
 		self._ax.grid(which='both', alpha=1.0, linewidth=1)
 		self._ax.tick_params(which='both', direction='out')
 
-		self._fig.colorbar(self._q, ax=self._ax)
-
+		c = self._fig.colorbar(self._q, ax=self._ax)
+		c.set_label('m/s')
 		self.draw()
 
 		# Force recomputation of colorbar

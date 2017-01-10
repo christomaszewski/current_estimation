@@ -36,7 +36,7 @@ class ParticleSimulator(object):
 				observedParticlePos = tuple(map(sum, zip(newParticlePos, 
 					(randX*self._observationNoise, randY*self._observationNoise))))
 
-				track.addObservation(observedParticlePos, t)
+				track.addObservation(newParticlePos, t)
 
 			particleTracks.append(track)
 

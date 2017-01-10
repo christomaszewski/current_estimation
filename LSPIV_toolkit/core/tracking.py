@@ -42,6 +42,10 @@ class Track(object):
 		self._positions.append(position)
 		self._times.append(time)
 
+	def addObservations(self, position, time):
+		self._positions.extend(position)
+		self._times.extend(time)
+
 	def getLastObservation(self):
 		""" Currently just returns the position of the last observation
 

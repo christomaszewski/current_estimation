@@ -196,7 +196,7 @@ with open(subFolder + '/approxVf.scenario', mode='wb') as f:
 	dill.dump(approxVF, f)
 """
 
-datasetName = 'boat_right'
+datasetName = 'boat_center_2'
 datasetDir = '../../../datasets/river/'
 dataset = datasetDir + datasetName
 images = glob.glob(dataset + '/*.tiff')
@@ -233,6 +233,84 @@ for fileName in images:
 #wrong - just need to flip y axis
 
 mFilter.addMeasurements(boatTrack.getMeasurements(scoring='constant'))
+
+
+datasetName = 'boat_right'
+datasetDir = '../../../datasets/river/'
+dataset = datasetDir + datasetName
+images = glob.glob(dataset + '/*.tiff')
+list.sort(images)
+
+datasetTimestep = 0.033 # 29.9 FPS
+renderTimestep = 1
+minTrackAge = 0.5
+
+boatDetector = cv_detectors.BoatDetector()
+
+boatTrack = vf_core.tracking.Track()
+
+timeStamp = 0.0
+
+for fileName in images:
+	print("Processing Image: ", fileName)
+	img = cv2.imread(fileName)
+
+	if (not camModel.initialized):
+		camModel.initialize(img.shape[:2])
+		frameTrans = cv_utils.FrameTransformation(img.shape[:2], camModel)
+
+	undistortedImg = frameTrans.transformImg(img)
+	result = boatDetector.detect(undistortedImg.copy())
+	
+	if (result):
+		# Flip y coodinates to change from image to field frame
+		xPos, yPos = boatDetector.midpoint
+		boatTrack.addObservation((xPos, 700-yPos), timeStamp)
+
+	timeStamp += datasetTimestep
+
+
+mFilter.addMeasurements(boatTrack.getMeasurements(scoring='constant'))
+
+
+datasetName = 'boat_center'
+datasetDir = '../../../datasets/river/'
+dataset = datasetDir + datasetName
+images = glob.glob(dataset + '/*.tiff')
+list.sort(images)
+
+datasetTimestep = 0.033 # 29.9 FPS
+renderTimestep = 1
+minTrackAge = 0.5
+
+boatDetector = cv_detectors.BoatDetector()
+
+boatTrack = vf_core.tracking.Track()
+
+timeStamp = 0.0
+
+for fileName in images:
+	print("Processing Image: ", fileName)
+	img = cv2.imread(fileName)
+
+	if (not camModel.initialized):
+		camModel.initialize(img.shape[:2])
+		frameTrans = cv_utils.FrameTransformation(img.shape[:2], camModel)
+
+	undistortedImg = frameTrans.transformImg(img)
+	result = boatDetector.detect(undistortedImg.copy())
+	
+	if (result):
+		# Flip y coodinates to change from image to field frame
+		xPos, yPos = boatDetector.midpoint
+		boatTrack.addObservation((xPos, 700-yPos), timeStamp)
+
+	timeStamp += datasetTimestep
+
+
+mFilter.addMeasurements(boatTrack.getMeasurements(scoring='constant'))
+
+
 vfEstimator.clearMeasurements()
 vfEstimator.addMeasurements(mFilter.getMeasurements())
 approxVF = vfEstimator.approximate(vfExtents)
@@ -255,3 +333,6 @@ overlayView.save(overlayFile)
 fieldView.save(approxFile)
 mFilter.saveFig(measurementFile)
 cv2.imwrite(outputFile, undistortedImg)
+
+with open('../scenarios/augmented.scenario', mode='wb') as f:
+	dill.dump(approxVF, f)

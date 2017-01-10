@@ -28,7 +28,7 @@ class MeasurementProcessor(object):
 		self._yCellWidth = yDistance / self._yCellCount		#meters
 		self._yCellHalfWidth = self._yCellWidth / 2.0		#meters
 
-		self._maxMeasurementsPerCell = 10
+		self._maxMeasurementsPerCell = 2
 
 		self._measurementBins = defaultdict(list)
 
