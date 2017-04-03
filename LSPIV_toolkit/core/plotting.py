@@ -78,7 +78,6 @@ class SimpleFieldView(object):
 		self._ax = self._fig.add_subplot(1,1,1)
 		self._ax.grid(True)
 		self._ax.axis([0, 10, 0, 10])
-		self._ax.hold(True)
 		t = np.asarray(track.getPointSequence())
 		self._ax.scatter(t[:,0], t[:,1], c=color, marker=marker, s=150, label=label)
 		self._ax.plot(t[:,0], t[:,1], c=color)
@@ -97,13 +96,16 @@ class SimpleFieldView(object):
 		self._ax = self._fig.add_subplot(1,1,1)
 		self._ax.grid(True)
 		self._ax.axis([0, 10, 0, 10])
-		self._ax.hold(True)
 		t = np.asarray([m.point for m in measurements])
 		self._ax.scatter(t[:,0], t[:,1], c=color, marker='o', s=150, label=label)
 		plt.xticks(np.arange(0, 11, 2.0))
 		plt.yticks(np.arange(0, 11, 2.0))
 		plt.legend()
 
+	def plotPoints(self, points, color, marker, label):
+		t = np.asarray(points)
+		self._ax.scatter(t[:,0], t[:,1], c=color, marker=marker, s=150, label=label)
+		plt.legend()
 
 	def changeGrid(self, newGrid):
 		self._grid = newGrid

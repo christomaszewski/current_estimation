@@ -102,6 +102,8 @@ class VectorField(Field):
 	def measureAtPoint(self, point):
 		return Measurement(point, self.sampleAtPoint(point))
 
+	def measureAtPoints(self, points):
+		return map(self.measureAtPoint, points)
 
 	@property
 	def representation(self):

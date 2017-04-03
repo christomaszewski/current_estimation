@@ -82,6 +82,18 @@ class FieldExtents(object):
 	def yRange(self):
 		return (self._yMin, self._yMax)
 
+	@property
+	def xDist(self):
+		return self._xMax - self._xMin
+
+	@property
+	def yDist(self):
+		return self._yMax - self._yMin
+
+	@property
+	def size(self):
+		return(self.xDist, self.yDist)
+
 class PiecewiseExtents(FieldExtents):
 	"""Class representing the valid extents of a 2D field defined as set of
 	component subextents. Does not consider the space between component extents
@@ -115,6 +127,18 @@ class PiecewiseExtents(FieldExtents):
 
 	@property
 	def yRange(self):
+		return None
+
+	@property
+	def xDist(self):
+		return None
+
+	@property
+	def yDist(self):
+		return None
+
+	@property
+	def size(self):
 		return None
 
 class EncompassingExtents(FieldExtents):
@@ -165,6 +189,18 @@ class InfiniteExtents(FieldExtents):
 
 	@property
 	def yRange(self):
+		return None
+
+	@property
+	def xDist(self):
+		return None
+
+	@property
+	def yDist(self):
+		return None
+
+	@property
+	def size(self):
 		return None
 
 class NullExtents(FieldExtents):

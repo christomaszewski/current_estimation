@@ -9,7 +9,7 @@ import LSPIV_toolkit.core.utils as vf_utils
 import LSPIV_toolkit.core.plotting as vf_plot
 
 # Scenario Name
-scenarioName = 'allegheny'
+scenarioName = 'pylon'
 
 # Scenario Field file name
 scenarioFile = '../scenarios/' + scenarioName + '.scenario'

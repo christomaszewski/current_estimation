@@ -5,6 +5,85 @@ from ..core import vf
 from ..core import utils as vf_utils
 from .. import sim as vf_sim
 
+class GridSampleEvaluator(object):
+
+	def __init__(self, sampleGrid, sourceField=None, approxField=None):
+		self._grid = sampleGrid
+		self._source = sourceField
+		self._approx = approxField
+
+		self._error = None
+		self._xSource = self._ySource = None
+		self._xApprox = self._yApprox = None
+
+		if (self._source is not None):
+			self._updateGroundTruth()
+
+		if (self._approx is not None):
+			self._updateApprox()
+
+		self._computeErrors()
+
+	def setGrid(self, sampleGrid):
+		self._grid = sampleGrid
+		self._error = None
+		self._updateGroundTruth()
+		self._updateApprox()
+		self._computeErrors()
+
+	def setGroundTruth(self, sourceField):
+		self._source = sourceField
+		self._error = None
+		self._updateGroundTruth()
+		self._computeErrors()
+
+	def setApprox(self, approxField):
+		self._approx = approxField
+		self._error = None
+		self._updateApprox()
+		self._computeErrors()
+
+	def _updateGroundTruth(self):
+		self._xSource, self._ySource = self._source.sampleGrid(self._grid)
+		xSquared = self._xSource ** 2
+		ySquared = self._ySource ** 2
+		self._summedMag = np.sum(np.sqrt(xSquared + ySquared))
+
+	def _updateApprox(self):
+		self._xApprox, self._yApprox = self._approx.sampleGrid(self._grid)
+
+	def _computeErrors(self):
+		if (self._source is None or self._approx is None):
+			self._error = None
+			return False
+
+		if (self._xSource is None or self._ySource is None):
+			self._updateGroundTruth()
+
+		if (self._xApprox is None or self._yApprox is None):
+			self._updateApprox()
+
+		self._xDiff = self._xApprox - self._xSource
+		self._yDiff = self._yApprox - self._ySource
+		self._squareDiffX = self._xDiff ** 2
+		self._squareDiffY = self._yDiff ** 2
+		
+		self._sumSquaredDiffX = np.sum(self._squareDiffX)
+		self._sumSquaredDiffY = np.sum(self._squareDiffY)
+
+		summed = np.sum(np.sqrt(self._squareDiffX + self._squareDiffY))
+
+		self._error = summed/self._summedMag
+
+	@property
+	def error(self):
+		if (self._error is None):
+			self._computeErrors()
+
+		return self._error
+
+
+
 class GridSampleComparison(object):
 	""" Approximation quality evaluation via sampling both source and approximate fields
 		across a grid and computing the differences between components of the vectors at
@@ -17,7 +96,7 @@ class GridSampleComparison(object):
 		self._source = sourceField
 		self._approx = approxField
 
-		self.invalidate()
+		self._compute()
 
 	def invalidate(self):
 		""" Invalidate/clear all computed values
@@ -40,9 +119,12 @@ class GridSampleComparison(object):
 
 	def changeGrid(self, sampleGrid):
 		self._grid = sampleGrid
-		self._invalidate()
+		self.invalidate()
 
 	def plotErrors(self):
+		if (not self._compute()):
+			return
+			
 		self._fig = plt.figure(figsize=(14, 10), dpi=100)
 		self._ax = self._fig.add_subplot(1,1,1)
 		self._ax.set_title('Error Vectors')
@@ -69,18 +151,33 @@ class GridSampleComparison(object):
 		# Check if computation is possible
 		if (self._source is None or self._approx is None or self._grid is None):
 			self.invalidate()
-			return
+			return False
 
 		xSource, ySource = self._source.sampleGrid(self._grid)
+		xSquared = xSource * xSource
+		ySquared = ySource * ySource
+		self._summedMag = np.sum(np.sqrt(xSquared + ySquared))
+
 		xApprox, yApprox = self._approx.sampleGrid(self._grid)
 
 		self._xDiff = xApprox - xSource
 		self._yDiff = yApprox - ySource
-		squareDiffX = self._xDiff * self._xDiff
-		squareDiffY = self._yDiff * self._yDiff
+		self._squareDiffX = self._xDiff * self._xDiff
+		self._squareDiffY = self._yDiff * self._yDiff
 		
-		self._sumSquaredDiffX = np.sum(squareDiffX)
-		self._sumSquaredDiffY = np.sum(squareDiffY)
+		self._sumSquaredDiffX = np.sum(self._squareDiffX)
+		self._sumSquaredDiffY = np.sum(self._squareDiffY)
+
+		return True
+
+	@property
+	def approxError(self):
+		if (self._xDiff is None or self._yDiff is None):
+			self._compute()
+
+		summed = np.sum(np.sqrt(self._squareDiffX + self._squareDiffY))
+
+		return summed/self._summedMag
 
 	@property
 	def error(self):

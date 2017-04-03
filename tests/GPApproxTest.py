@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import dill
 
 from context import LSPIV_toolkit
 
@@ -7,102 +8,59 @@ import LSPIV_toolkit.core.vf.fields as field_lib
 import LSPIV_toolkit.core.utils as vf_utils
 import LSPIV_toolkit.sim as vf_sim
 import LSPIV_toolkit.approx as vf_approx
+import LSPIV_toolkit.core.plotting as vf_plot
+
 
 plt.ion()
 
-# Scenario Setup
+# Load Scenario
+scenarioName = 'pylon'
 
-vMax = 3 #m/s
-riverWidth = 100 #meters
+# Scenario Field file name
+scenarioFile = '../scenarios/' + scenarioName + '.scenario'
 
-sourceVF1 = field_lib.DevelopedPipeFlowField(channelWidth=50, vMax=vMax)
-sourceVF2 = field_lib.DevelopedPipeFlowField(channelWidth=50, vMax=2*vMax, offset=(50,0))
-compoundVF = field_lib.CompoundVectorField(sourceVF1, sourceVF2)
+with open(scenarioFile, mode='rb') as f:
+	compoundVF = dill.load(f)
 
+xDist = compoundVF.extents.xRange[1] - compoundVF.extents.xRange[0]
+yDist = compoundVF.extents.yRange[1] - compoundVF.extents.yRange[0]
 
-xGrid = 25 #cells
-yGrid = 8 #cells
-xDist = 100 #meters
-yDist = 50 #meters
+xGrid = 35 #cells
+yGrid = 15 #cells
 
 grid = vf_utils.SampleGrid(xDist, yDist, xGrid, yGrid)
 
 # Initial Plot
+sourceFieldView = vf_plot.SimpleFieldView(compoundVF, grid)
+sourceFieldView.quiver()
 
-xSamples, ySamples = compoundVF.sampleGrid(grid)
-xgrid, ygrid = grid.mgrid
-magnitude = np.sqrt(xSamples**2 + ySamples**2)
+# Sample source at random points
+numPoints = 100
 
-fig = plt.figure()
-ax = fig.add_subplot(1,3,1)
-ax.set_title('Source Field (Ground Truth)')
-q1 = ax.quiver(xgrid, ygrid, xSamples, ySamples, magnitude, angles='xy', scale_units='xy', scale=1, cmap=plt.cm.jet)
-ax.axis(compoundVF.plotExtents)
-ax.hold(True)
-fig.colorbar(q1, ax=ax)
+points = [tuple([np.random.rand(1)[0]*xDist, np.random.rand(1)[0]*yDist]) for _ in np.arange(numPoints)]
 
-# Simulation
-
-seedParticles = [(0, (5, 5)), (0, (15, 5)), (0, (25, 5)), (0, (35, 5)), (0, (45, 5)),
-				(0, (55, 5)), (0, (65, 5)), (0, (75, 5)), (0, (85, 5)), (0, (95, 5))]
-
-#seedParticles = [(0, (10, 30)), (0, (5,5))]
-
-simulator = vf_sim.simulators.ParticleSimulator(compoundVF)
-
-tracks = simulator.simulate(seedParticles, time=2, timestep=0.5)
-
-# Track Plotting
-
-c = 0
-colors = ['red', 'blue', 'cyan', 'orange', 'green', 'black', 'yellow', 'purple', 'brown']
-for track in tracks:
-	t = np.asarray(track.getPointSequence())
-	ax.scatter(t[:,0], t[:,1], c=colors[c])
-	c = (c+1) % len(colors)
-
-plt.show()
+measurements = list(compoundVF.measureAtPoints(points))
 
 
-# GP Approximation
-
+# Test Reconstruction 
 vfEstimator = vf_approx.gp.GPApproximator()
-for track in tracks:
-	vfEstimator.addMeasurements(track.getMeasurements(scoring='time'))
 
+vfEstimator.addMeasurements(measurements)
 approxVF = vfEstimator.approximate(compoundVF.extents)
 
-# Approximation Plotting
 
-xSamples, ySamples = approxVF.sampleGrid(grid)
+# Plot reconstruction
+approxFieldView = vf_plot.SimpleFieldView(approxVF, grid)
+approxFieldView.quiver()
+#sourceFieldView.plotPoints(points, 'black', 'o', 'Measurements')
 
-magnitude = np.sqrt(xSamples**2 + ySamples**2)
+sourceFieldView.save('../output/source.png')
+approxFieldView.save('../output/approx.png')
 
-ax2 = fig.add_subplot(1,3,2)
-ax2.set_title('GP Approximation')
-
-q2 = ax2.quiver(xgrid, ygrid, xSamples, ySamples, magnitude, angles='xy', scale_units='xy', scale=1, cmap=plt.cm.jet)
-ax2.axis(approxVF.plotExtents)
-fig.colorbar(q2, ax=ax2)
-plt.show()
-
-vfPolyEstimator = vf_approx.polynomial.PolynomialLSApproxmiator(polyDegree=4)
-for track in tracks:
-	vfPolyEstimator.addMeasurements(track.getMeasurements(scoring='time'))
-
-polyApproxVF = vfPolyEstimator.approximate(compoundVF.extents)
-
-xSamples, ySamples = polyApproxVF.sampleGrid(grid)
-
-magnitude = np.sqrt(xSamples**2 + ySamples**2)
-
-ax3 = fig.add_subplot(1,3,3)
-ax3.set_title('Polynomial Appoximation')
-
-q3 = ax3.quiver(xgrid, ygrid, xSamples, ySamples, magnitude, angles='xy', scale_units='xy', scale=1, cmap=plt.cm.jet)
-ax3.axis(polyApproxVF.plotExtents)
-fig.colorbar(q3, ax=ax3)
-plt.show()
-plt.pause(5)
-
-fig.savefig("GPApproxTest.png", bbox_inches='tight')
+fieldEval = vf_approx.eval.GridSampleComparison(grid, sourceField=compoundVF, approxField=approxVF)
+print(fieldEval.meanError)
+print(fieldEval.maxError)
+print(fieldEval.minError)
+fieldEval.plotErrors()
+fieldEval.save('../output/reconstructionError.png')
+	
