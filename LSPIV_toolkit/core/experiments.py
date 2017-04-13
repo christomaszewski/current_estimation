@@ -1,8 +1,7 @@
 import numpy as np
 import dill
 from researcher.experiment import Experiment
-
-from .. import approx as vf_approx
+import field_toolkit.approx as vf_approx
 
 class GPReconstructionExperiment(Experiment):
 	""" A class representing a experiment to run in simulation
@@ -12,8 +11,6 @@ class GPReconstructionExperiment(Experiment):
 
 	def __init__(self, source, grid, evaluator):
 		self._sourceVF = source
-		#self._xDist = source.extents.xRange[1] - source.extents.xRange[0]
-		#self._yDist = source.extents.yRange[1] - source.extents.yRange[0]
 
 		self._xDist, self._yDist = source.extents.size
 
@@ -45,8 +42,7 @@ class GPReconstructionExperiment(Experiment):
 		runApproxData = []
 
 		for i in np.arange(self._numIterations):
-			points = [tuple([np.random.rand(1)[0]*self._xDist, np.random.rand(1)[0]*self._yDist]) for _ in np.arange(self._numSamples)]
-			measurements = list(self._sourceVF.measureAtPoints(points))
+			measurements = self._sourceVF.randomMeasurements(self._numSamples)
 
 			self._estimator.clearMeasurements()
 			self._estimator.addMeasurements(measurements)

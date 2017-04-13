@@ -4,18 +4,14 @@ import dill
 
 from context import LSPIV_toolkit
 
-import LSPIV_toolkit.core.vf.fields as field_lib
-import LSPIV_toolkit.core.utils as vf_utils
-import LSPIV_toolkit.sim as vf_sim
-import LSPIV_toolkit.approx as vf_approx
-import LSPIV_toolkit.core.plotting as vf_plot
+from field_toolkit.core import primitives
+from field_toolkit.viz.plotting import SimpleFieldView
+from field_toolkit.analysis.eval import GridSampleEvaluator
 import LSPIV_toolkit.core.experiments as vf_experiments
 
 from researcher.executor import MultiProcessExecutor
 
 if __name__ == '__main__':
-
-
 	plt.ion()
 
 	# Load Scenario
@@ -28,22 +24,21 @@ if __name__ == '__main__':
 		sourceVF = dill.load(f)
 
 	# All distances in meters
-	xDist = sourceVF.extents.xRange[1] - sourceVF.extents.xRange[0]
-	yDist = sourceVF.extents.yRange[1] - sourceVF.extents.yRange[0]
+	xDist, yDist = sourceVF.extents.size
 
 	# Define grid to sample sub m^2 cells
 	xGrid = xDist*4 #cells
 	yGrid = yDist*4 #cells
 
-	grid = vf_utils.SampleGrid(xDist, yDist, xGrid, yGrid)
+	grid = primitives.SampleGrid(xDist, yDist, xGrid, yGrid)
 
 	# Initial Plot
-	#sourceFieldView = vf_plot.SimpleFieldView(compoundVF, grid)
+	#sourceFieldView = SimpleFieldView(compoundVF, grid)
 	#sourceFieldView.quiver()
 
-	nIterations = 1000
+	nIterations = 5
 
-	evaluator = vf_approx.eval.GridSampleEvaluator(grid, sourceField=sourceVF)
+	evaluator = GridSampleEvaluator(grid, sourceField=sourceVF)
 
 	exp = vf_experiments.GPReconstructionExperiment(sourceVF, grid, evaluator)
 	exp.setup(nIterations)

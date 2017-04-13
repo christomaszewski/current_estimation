@@ -1,6 +1,6 @@
 import numpy as np
 
-from .utils import Measurement
+from field_toolkit.core.primitives import Measurement
 
 class Track(object):
 	""" Represents a single particle/point on an object tracked over some 
